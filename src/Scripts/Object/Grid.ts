@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import Bubble from "./Bubble";
-import Shooter from "./shooter";
+import Shooter from "./Shooter";
 import { BubbleColors, getRandomColor } from "../Util/Bubble";
 
 export default class Grid extends Phaser.GameObjects.Container {
