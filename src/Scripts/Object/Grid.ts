@@ -12,7 +12,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   static halfHeight = Grid.height / 2;
   static offsetX = -Grid.halfWidth + Bubble.halfSize;
   static offsetY = -Grid.height + Bubble.halfSize;
-  static gridBounds = new Phaser.Geom.Rectangle(
+  static eventArea = new Phaser.Geom.Rectangle(
     -Grid.halfWidth,
     -Grid.height,
     Grid.width,
@@ -47,36 +47,56 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.bubbleGroup = this.scene.physics.add.group({
       classType: Bubble,
       runChildUpdate: true,
+      collideWorldBounds: true,
+      customBoundsRectangle: new Phaser.Geom.Rectangle(
+        this.x - Grid.halfWidth,
+        this.y - Grid.height,
+        Grid.width,
+        Grid.height + Bubble.size
+      ),
+      bounceX: 1,
+      bounceY: 1,
     });
+
+    this.scene.physics.world.on(
+      Phaser.Physics.Arcade.Events.WORLD_BOUNDS,
+      (body: Phaser.Physics.Arcade.Body) => {
+        const bubble = body.gameObject as Bubble;
+        bubble.onCollideWorld();
+      }
+    );
 
     this.scene.physics.add.collider(
       this.bubbleGroup,
       this.bubbleGroup,
-      (bubble1: Bubble, bubble2: Bubble) => {
-        if (
-          bubble1 === this.shootingBubble ||
-          bubble2 === this.shootingBubble
-        ) {
-          const { col, row } = this.shootingBubble.snapToClosest();
-          this.setBubbleAt(this.shootingBubble, col, row);
-          const cluster = this.getCluster(col, row);
-
-          if (cluster.length >= Grid.minCluster) {
-            cluster.forEach((bubble) => bubble.destroy());
-          }
-
-          this.loadShootingBubble();
+      (b1: Bubble, b2: Bubble) => {
+        if (b1 === this.shootingBubble || b2 === this.shootingBubble) {
+          this.onHit();
         }
       }
     );
   }
 
   fillGrid() {
-    for (let row = 0; row < 5; row++) {
-      this.bubbleTile[row].forEach((bubble, col) => {
-        this.addBubble(col, row, getRandomColor());
-      });
-    }
+    // for (let row = 0; row < 5; row++) {
+    //   this.bubbleTile[row].forEach((bubble, col) => {
+    //     this.addBubble(col, row, getRandomColor());
+    //   });
+    // }
+    // this.loadShootingBubble(BubbleColors.red);
+
+    // For testing
+    this.addBubble(1, 0, BubbleColors.green);
+    this.addBubble(3, 1, BubbleColors.green);
+    this.addBubble(2, 0, BubbleColors.red);
+    this.addBubble(3, 0, BubbleColors.red);
+    this.addBubble(4, 0, BubbleColors.red);
+    this.addBubble(4, 1, BubbleColors.red);
+    this.addBubble(5, 2, BubbleColors.red);
+    this.addBubble(5, 3, BubbleColors.blue);
+    this.addBubble(5, 4, BubbleColors.blue);
+    this.addBubble(6, 4, BubbleColors.blue);
+    this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -90,6 +110,12 @@ export default class Grid extends Phaser.GameObjects.Container {
     }
 
     this.bubbleTile[row][col] = bubble;
+  }
+
+  removeBubble(bubble: Bubble) {
+    const { col, row } = bubble;
+    this.setBubbleAt(null, col, row);
+    // this.bubbleGroup.remove(bubble);
   }
 
   addBubble(col: number, row: number, color: BubbleColors) {
@@ -109,10 +135,9 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.shootingBubble.shoot(angle);
   }
 
-  loadShootingBubble() {
-    const bubble = this.bubbleGroup.get(0, 0);
-    bubble.setColor(getRandomColor());
-    bubble.setGridBounds(0, 0, Grid.width, Grid.height);
+  loadShootingBubble(color = getRandomColor()) {
+    const bubble = this.bubbleGroup.get(0, 0) as Bubble;
+    bubble.setColor(color);
 
     this.add(bubble);
     this.shootingBubble = bubble;
@@ -123,8 +148,6 @@ export default class Grid extends Phaser.GameObjects.Container {
 
     this.add(shooter);
     this.shooter = shooter;
-
-    this.loadShootingBubble();
   }
 
   getCluster(col: number, row: number): Bubble[] {
@@ -132,10 +155,31 @@ export default class Grid extends Phaser.GameObjects.Container {
     if (!bubble) return [];
 
     // Map of tile not searched yet
-    const searchMap = this.bubbleTile.map((row) =>
-      row.map((bubble) => !!bubble)
-    );
+    const searchMap = this.bubbleTile.map((r) => r.map((bubble) => !!bubble));
     return this.searchCluster(col, row, bubble.getColor(), [], searchMap);
+  }
+
+  getFloating(): Bubble[] {
+    // Map of tile not searched yet
+    const searchMap = this.bubbleTile.map((r) => r.map((bubble) => !!bubble));
+
+    // Check cluster on 1st row and marked them in searchMap
+    this.bubbleTile[0].forEach((b, col) => {
+      this.searchCluster(col, 0, null, [], searchMap);
+    });
+
+    console.log(searchMap);
+    // Search all unmarked bubble searchMap
+    const floatingBubbles = [];
+    searchMap.forEach((r, row) =>
+      r.forEach((isUnmarked, col) => {
+        if (isUnmarked) {
+          floatingBubbles.push(this.bubbleTile[row][col]);
+        }
+      })
+    );
+
+    return floatingBubbles;
   }
 
   private searchCluster(
@@ -149,7 +193,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     if (!(searchMap[row] && searchMap[row][col])) return cluster;
 
     const bubble = this.getBubbleAt(col, row);
-    if (color !== bubble.getColor()) return cluster;
+    if (color && color !== bubble.getColor()) return cluster;
     cluster.push(bubble);
     searchMap[row][col] = false;
 
@@ -171,7 +215,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   setEventArea() {
-    this.setInteractive(Grid.gridBounds, Phaser.Geom.Rectangle.Contains);
+    this.setInteractive(Grid.eventArea, Phaser.Geom.Rectangle.Contains);
 
     this.on("pointermove", (pointer, x, y) => {
       this.shooter.setTarget(x, y);
@@ -186,8 +230,30 @@ export default class Grid extends Phaser.GameObjects.Container {
       const c = 0x6666ff;
       const graphics = new Phaser.GameObjects.Graphics(this.scene);
       graphics.lineStyle(1, 0x00ff00, 1);
-      graphics.strokeRectShape(Grid.gridBounds);
+      graphics.strokeRectShape(Grid.eventArea);
       this.add(graphics);
     }
+  }
+
+  onHit() {
+    const { col, row } = this.shootingBubble.snapToClosest();
+    this.setBubbleAt(this.shootingBubble, col, row);
+    const cluster = this.getCluster(col, row);
+
+    if (cluster.length >= Grid.minCluster) {
+      cluster.forEach((bubble) => {
+        this.removeBubble(bubble);
+        bubble.pop();
+      });
+    }
+
+    const floatingBubbles = this.getFloating();
+    floatingBubbles.forEach((bubble) => {
+      this.removeBubble(bubble);
+      this.bubbleGroup.remove(bubble);
+      bubble.drop();
+    });
+
+    this.loadShootingBubble();
   }
 }

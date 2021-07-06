@@ -42,7 +42,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
         end: 5,
       }),
       frameRate: 20,
-      repeat: -1,
+      repeat: 0,
     });
 
     this.play("idle");
@@ -71,6 +71,9 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     const { x, y } = this.getTileCoordinate(col, row);
     this.body.reset(x, y);
 
+    this.col = col;
+    this.row = row;
+
     this._x = x;
     this._y = y;
 
@@ -87,15 +90,9 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   shoot(angle: number) {
     const vel = new Phaser.Math.Vector2(SHOOTING_SPEED, 0);
     vel.rotate(angle);
-    this.setBounce(1);
     this.setVelocity(vel.x, vel.y);
     this.isShooting = true;
     this.isSnapped = false;
-  }
-
-  setGridBounds(bounds: Phaser.Geom.Rectangle) {
-    this.setCollideWorldBounds(true);
-    this.body.setBoundsRectangle(bounds);
   }
 
   getTileCoordinate(col: number, row: number): ICoordinate {
@@ -111,6 +108,28 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     var col = Math.round((x - offsetX) / Bubble.size);
 
     return { col, row };
+  }
+
+  pop() {
+    this.scene.sound.play("pop");
+    this.anims.complete;
+    this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.destroy();
+    });
+    this.play("destroy");
+  }
+
+  drop() {
+    const GRAVITY = 1000;
+    this.setGravityY(GRAVITY);
+    this.setVelocityX((0.5 - Math.random()) * 1000);
+    this.isSnapped = false;
+    this.body.onWorldBounds = true;
+  }
+
+  // Only called when dropped
+  onCollideWorld() {
+    this.destroy();
   }
 
   update() {

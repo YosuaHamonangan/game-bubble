@@ -22,6 +22,13 @@ const images: Phaser.Types.Loader.FileTypes.ImageFileConfig[] = [
   },
 ];
 
+const audios: Phaser.Types.Loader.FileTypes.AudioFileConfig[] = [
+  {
+    key: "pop",
+    url: "/Audio/Blop.mp3",
+  },
+];
+
 export default class PreloadScene extends Phaser.Scene {
   constructor() {
     super({ key: "PreloadScene" });
@@ -31,6 +38,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.path = basePath;
     this.load.image(images);
     this.load.spritesheet(spritesheets);
+    this.load.audio(audios);
   }
 
   create(): void {
