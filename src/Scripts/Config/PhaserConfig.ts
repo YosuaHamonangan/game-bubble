@@ -4,7 +4,7 @@ import LevelScene from "../Scene/LevelScene";
 import PreloadScene from "../Scene/PreloadScene";
 import TitleScene from "../Scene/TitleScene";
 
-import {getResolution} from '../Util/Util'
+import { getResolution } from "../Util/Util";
 
 export const config: PhaserConfig = {
   title: "PhaserGame",
@@ -19,10 +19,10 @@ export const config: PhaserConfig = {
   physics: {
     default: "arcade",
     arcade: {
-      debug: false
-    }
+      debug: true,
+      gravity: { y: 0 },
+    },
   },
   backgroundColor: "#493a52",
-  scene: [PreloadScene, TitleScene, LevelScene]
- 
+  scene: [PreloadScene, TitleScene, LevelScene],
 };
