@@ -3,28 +3,25 @@ import Bubble from "./Bubble";
 import Shooter from "./shooter";
 import { BubbleColors, getRandomColor } from "../Util/Bubble";
 
-interface ICoordinate {
-  x: number;
-  y: number;
-}
-
-interface IPosition {
-  col: number;
-  row: number;
-}
-
 export default class Grid extends Phaser.GameObjects.Container {
   static cols = 8;
   static rows = 12;
   static width = Grid.cols * Bubble.size;
-  static height = Grid.rows * Bubble.size;
+  static height = (Grid.rows + 1) * Bubble.size;
   static halfWidth = Grid.width / 2;
   static halfHeight = Grid.height / 2;
   static offsetX = -Grid.halfWidth + Bubble.halfSize;
   static offsetY = -Grid.height + Bubble.halfSize;
+  static gridBounds = new Phaser.Geom.Rectangle(
+    -Grid.halfWidth,
+    -Grid.height,
+    Grid.width,
+    Grid.height
+  );
+  static minCluster = 3;
 
   shooter: Shooter;
-  shotBubble: Bubble | null = null;
+  shootingBubble: Bubble | null = null;
   bubbleGroup: Phaser.Physics.Arcade.Group;
   private bubbleTile: Bubble[][];
 
@@ -56,8 +53,20 @@ export default class Grid extends Phaser.GameObjects.Container {
       this.bubbleGroup,
       this.bubbleGroup,
       (bubble1: Bubble, bubble2: Bubble) => {
-        bubble1.onCollide();
-        bubble2.onCollide();
+        if (
+          bubble1 === this.shootingBubble ||
+          bubble2 === this.shootingBubble
+        ) {
+          const { col, row } = this.shootingBubble.snapToClosest();
+          this.setBubbleAt(this.shootingBubble, col, row);
+          const cluster = this.getCluster(col, row);
+
+          if (cluster.length >= Grid.minCluster) {
+            cluster.forEach((bubble) => bubble.destroy());
+          }
+
+          this.loadShootingBubble();
+        }
       }
     );
   }
@@ -70,19 +79,26 @@ export default class Grid extends Phaser.GameObjects.Container {
     }
   }
 
-  getBubbleAt(col: number, row: number): Bubble | null {
+  getBubbleAt(col: number, row: number): Bubble | null | undefined {
+    if (!this.bubbleTile[row]) return undefined;
     return this.bubbleTile[row][col];
   }
 
   setBubbleAt(bubble: Bubble, col: number, row: number) {
-    this.bubbleTile[row][col];
+    if (typeof this.bubbleTile[row][col] === "undefined") {
+      throw new TypeError(`setBubbleAt : col=${col}, row=${row} is not valid`);
+    }
+
+    this.bubbleTile[row][col] = bubble;
   }
 
   addBubble(col: number, row: number, color: BubbleColors) {
-    if (this.getBubbleAt(col, row)) throw new TypeError("Bubble already exist");
+    if (this.getBubbleAt(col, row)) {
+      throw new TypeError(`addBubble : Bubble exist at col=${col}, row=${row}`);
+    }
 
-    const { x, y } = this.getTileCoordinate(col, row);
-    const bubble = this.bubbleGroup.get(x, y);
+    const bubble = this.bubbleGroup.get(0, 0) as Bubble;
+    bubble.snapToPosition(col, row);
     bubble.setColor(color);
 
     this.add(bubble);
@@ -90,33 +106,72 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   shootBubble(angle: number) {
-    const x = 0,
-      y = 0;
-    const bubble = this.bubbleGroup.get(x, y);
-    bubble.shoot(angle);
+    this.shootingBubble.shoot(angle);
+  }
+
+  loadShootingBubble() {
+    const bubble = this.bubbleGroup.get(0, 0);
+    bubble.setColor(getRandomColor());
+    bubble.setGridBounds(0, 0, Grid.width, Grid.height);
 
     this.add(bubble);
-    this.shotBubble = bubble;
+    this.shootingBubble = bubble;
   }
 
   addShooter() {
-    const x = 0;
-    const y = 0;
-    const shooter = new Shooter(this.scene, x, y);
+    const shooter = new Shooter(this.scene, 0, 0);
 
     this.add(shooter);
     this.shooter = shooter;
+
+    this.loadShootingBubble();
+  }
+
+  getCluster(col: number, row: number): Bubble[] {
+    const bubble = this.getBubbleAt(col, row);
+    if (!bubble) return [];
+
+    // Map of tile not searched yet
+    const searchMap = this.bubbleTile.map((row) =>
+      row.map((bubble) => !!bubble)
+    );
+    return this.searchCluster(col, row, bubble.getColor(), [], searchMap);
+  }
+
+  private searchCluster(
+    col: number,
+    row: number,
+    color: BubbleColors,
+    cluster: Bubble[],
+    searchMap: boolean[][]
+  ): Bubble[] {
+    // Skip if tile already searched
+    if (!(searchMap[row] && searchMap[row][col])) return cluster;
+
+    const bubble = this.getBubbleAt(col, row);
+    if (color !== bubble.getColor()) return cluster;
+    cluster.push(bubble);
+    searchMap[row][col] = false;
+
+    this.searchCluster(col - 1, row, color, cluster, searchMap);
+    this.searchCluster(col + 1, row, color, cluster, searchMap);
+
+    this.searchCluster(col, row - 1, color, cluster, searchMap);
+    this.searchCluster(col, row + 1, color, cluster, searchMap);
+
+    if (row % 2) {
+      this.searchCluster(col + 1, row - 1, color, cluster, searchMap);
+      this.searchCluster(col + 1, row + 1, color, cluster, searchMap);
+    } else {
+      this.searchCluster(col - 1, row - 1, color, cluster, searchMap);
+      this.searchCluster(col - 1, row + 1, color, cluster, searchMap);
+    }
+
+    return cluster;
   }
 
   setEventArea() {
-    const x = -Grid.halfWidth,
-      y = -Grid.height,
-      w = Grid.width,
-      h = Grid.height;
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(x, y, w, h),
-      Phaser.Geom.Rectangle.Contains
-    );
+    this.setInteractive(Grid.gridBounds, Phaser.Geom.Rectangle.Contains);
 
     this.on("pointermove", (pointer, x, y) => {
       this.shooter.setTarget(x, y);
@@ -129,24 +184,10 @@ export default class Grid extends Phaser.GameObjects.Container {
 
     if (this.scene.game.config.physics.arcade.debug) {
       const c = 0x6666ff;
-      const area = new Phaser.GameObjects.Rectangle(this.scene, x, y, w, h, c);
-      area.setOrigin(0, 0);
-      this.add(area);
+      const graphics = new Phaser.GameObjects.Graphics(this.scene);
+      graphics.lineStyle(1, 0x00ff00, 1);
+      graphics.strokeRectShape(Grid.gridBounds);
+      this.add(graphics);
     }
-  }
-
-  getTileCoordinate(col: number, row: number): ICoordinate {
-    const x =
-      col * Bubble.size + (row % 2 ? Bubble.halfSize : 0) + Grid.offsetX;
-    const y = row * Bubble.size + Grid.offsetY;
-    return { x, y };
-  }
-
-  getGridPosition(x, y): IPosition {
-    const row = Math.floor((y - Grid.offsetY + Bubble.halfSize) / Bubble.size);
-    const offsetX = Grid.offsetX + (row % 2 ? Bubble.halfSize : 0);
-    var col = Math.round((x - offsetX) / Bubble.size);
-
-    return { col, row };
   }
 }

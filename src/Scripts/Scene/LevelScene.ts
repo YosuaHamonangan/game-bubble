@@ -15,7 +15,7 @@ export default class LevelScene extends Phaser.Scene {
     this.fpsText = new FpsText(this);
 
     const gridX = this.cameras.main.centerX;
-    const gridY = this.cameras.main.height - 200;
+    const gridY = this.cameras.main.height - 100;
 
     const grid = new Grid(this, gridX, gridY);
     this.add.existing(grid);
