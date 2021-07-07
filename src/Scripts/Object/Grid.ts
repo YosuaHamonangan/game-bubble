@@ -46,7 +46,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       for (let col = 0; col < cols; col++) {
         // Remove all bubble from prev game
         if (this.bubbleTile[row][col]) {
-          this.bubbleTile[row][col].destroy();
+          this.bubbleGroup.killAndHide(this.bubbleTile[row][col]);
         }
         this.bubbleTile[row][col] = null;
       }
@@ -56,7 +56,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   initBubbleGroup() {
-    this.bubbleGroup = this.scene.physics.add.group({
+    const config: Phaser.Types.Physics.Arcade.PhysicsGroupConfig = {
       classType: Bubble,
       runChildUpdate: true,
       collideWorldBounds: true,
@@ -68,57 +68,41 @@ export default class Grid extends Phaser.GameObjects.Container {
       ),
       bounceX: 1,
       bounceY: 1,
-    });
+    };
+    this.bubbleGroup = this.scene.physics.add.group(config);
 
     this.scene.physics.world.on(
       Phaser.Physics.Arcade.Events.WORLD_BOUNDS,
-      (
-        body: Phaser.Physics.Arcade.Body,
-        up: boolean,
-        down: boolean,
-        left: boolean,
-        right: boolean
-      ) => {
-        const bubble = body.gameObject as Bubble;
-        if (bubble === this.shootingBubble) {
-          if (up) this.onHit();
-        } else {
-          bubble.onCollideWorld(up, down, left, right);
-        }
-      }
+      this.OnBubbleWorldCollision.bind(this)
     );
 
     this.scene.physics.add.collider(
       this.bubbleGroup,
       this.bubbleGroup,
-      (b1: Bubble, b2: Bubble) => {
-        if (b1 === this.shootingBubble || b2 === this.shootingBubble) {
-          this.onHit();
-        }
-      }
+      this.OnBubbleBubbleCollision.bind(this)
     );
   }
 
   fillGrid() {
-    for (let row = 0; row < 5; row++) {
-      this.bubbleTile[row].forEach((bubble, col) => {
-        this.addBubble(col, row, getRandomColor());
-      });
-    }
-    this.loadShootingBubble();
+    // for (let row = 0; row < 5; row++) {
+    //   this.bubbleTile[row].forEach((bubble, col) => {
+    //     this.addBubble(col, row, getRandomColor());
+    //   });
+    // }
+    // this.loadShootingBubble();
 
     // For testing
-    // this.addBubble(1, 0, BubbleColors.red);
-    // this.addBubble(3, 1, BubbleColors.green);
-    // this.addBubble(2, 0, BubbleColors.red);
-    // this.addBubble(3, 0, BubbleColors.red);
-    // this.addBubble(4, 0, BubbleColors.red);
-    // this.addBubble(4, 1, BubbleColors.red);
-    // this.addBubble(5, 2, BubbleColors.red);
-    // this.addBubble(5, 3, BubbleColors.blue);
-    // this.addBubble(5, 4, BubbleColors.blue);
-    // this.addBubble(6, 4, BubbleColors.blue);
-    // this.loadShootingBubble(BubbleColors.red);
+    this.addBubble(1, 0, BubbleColors.red);
+    this.addBubble(3, 1, BubbleColors.green);
+    this.addBubble(2, 0, BubbleColors.red);
+    this.addBubble(3, 0, BubbleColors.red);
+    this.addBubble(4, 0, BubbleColors.red);
+    this.addBubble(4, 1, BubbleColors.red);
+    this.addBubble(5, 2, BubbleColors.red);
+    this.addBubble(5, 3, BubbleColors.blue);
+    this.addBubble(5, 4, BubbleColors.blue);
+    this.addBubble(6, 4, BubbleColors.blue);
+    this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -137,7 +121,6 @@ export default class Grid extends Phaser.GameObjects.Container {
   removeBubble(bubble: Bubble) {
     const { col, row } = bubble;
     this.setBubbleAt(null, col, row);
-
     this.calcScore(bubble);
   }
 
@@ -266,11 +249,53 @@ export default class Grid extends Phaser.GameObjects.Container {
     }
   }
 
-  onHit() {
-    const { col, row } = this.shootingBubble.snapToClosest();
-    this.setBubbleAt(this.shootingBubble, col, row);
-    const cluster = this.getCluster(col, row);
+  OnBubbleBubbleCollision(b1: Bubble, b2: Bubble) {
+    if (b1 === this.shootingBubble || b2 === this.shootingBubble) {
+      const otherBubble = b1 === this.shootingBubble ? b2 : b1;
 
+      if (this.shootingBubble.state === BubbleStates.moving) {
+        this.onHit(otherBubble);
+      } else if (this.shootingBubble.state === BubbleStates.idle) {
+        // For when dropped bubble hit loadded bubble
+        otherBubble.pop();
+      } else {
+        throw new TypeError("OnBubbleBubbleCollision : Unexpected condition");
+      }
+    }
+  }
+
+  OnBubbleWorldCollision(
+    body: Phaser.Physics.Arcade.Body,
+    up: boolean,
+    down: boolean,
+    left: boolean,
+    right: boolean
+  ) {
+    const bubble = body.gameObject as Bubble;
+    if (bubble === this.shootingBubble) {
+      if (up) this.onHit(null);
+    } else {
+      bubble.onCollideWorld(up, down, left, right);
+    }
+  }
+
+  onHit(bubble: Bubble) {
+    let { col, row } = this.shootingBubble.getTilePosition();
+
+    // Can be null when collide with world top bound
+    if (bubble) {
+      row = Math.min(row, bubble.row + 1);
+      row = Math.max(row, bubble.row - 1);
+    }
+    col = Math.min(col, row % 2 ? Grid.cols - 1 : Grid.cols);
+    col = Math.max(col, 0);
+
+    if (row >= Grid.rows) return console.log("game over");
+
+    this.shootingBubble.snapToPosition(col, row);
+    this.setBubbleAt(this.shootingBubble, col, row);
+
+    const cluster = this.getCluster(col, row);
     if (cluster.length >= Grid.minCluster) {
       cluster.forEach((bubble) => {
         this.removeBubble(bubble);

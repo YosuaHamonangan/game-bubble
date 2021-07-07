@@ -21,6 +21,8 @@ interface IPosition {
 
 const IMAGE_SIZE = 120;
 const HALF_IMAGE_SIZE = IMAGE_SIZE / 2;
+// smalled body for some spacing
+const BODY_RADIUS = HALF_IMAGE_SIZE * 0.9;
 const SHOOTING_SPEED = 3000;
 
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
@@ -43,7 +45,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     });
 
     this.anims.create({
-      key: "destroy",
+      key: "pop",
       frames: this.anims.generateFrameNumbers("bubble", {
         start: 0,
         end: 5,
@@ -56,9 +58,9 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.physics.add.existing(this);
     this.body.setCircle(
-      HALF_IMAGE_SIZE,
-      this.width / 2 - HALF_IMAGE_SIZE,
-      this.height / 2 - HALF_IMAGE_SIZE
+      BODY_RADIUS,
+      this.width / 2 - BODY_RADIUS,
+      this.height / 2 - BODY_RADIUS
     );
     this.body.onWorldBounds = true;
 
@@ -89,12 +91,6 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this.state = BubbleStates.snapped;
   }
 
-  snapToClosest(): IPosition {
-    const { col, row } = this.getTilePosition(this.x, this.y);
-    this.snapToPosition(col, row);
-    return { col, row };
-  }
-
   shoot(angle: number) {
     const vel = new Phaser.Math.Vector2(SHOOTING_SPEED, 0);
     vel.rotate(angle);
@@ -109,10 +105,12 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     return { x, y };
   }
 
-  getTilePosition(x, y): IPosition {
-    const row = Math.floor((y - Grid.offsetY + Bubble.halfSize) / Bubble.size);
+  getTilePosition(): IPosition {
+    const row = Math.floor(
+      (this.y - Grid.offsetY + Bubble.halfSize) / Bubble.size
+    );
     const offsetX = Grid.offsetX + (row % 2 ? Bubble.halfSize : 0);
-    var col = Math.round((x - offsetX) / Bubble.size);
+    var col = Math.round((this.x - offsetX) / Bubble.size);
 
     return { col, row };
   }
@@ -123,7 +121,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.destroy();
     });
-    this.play("destroy");
+    this.play("pop");
   }
 
   drop() {
@@ -139,6 +137,10 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
       case BubbleStates.droping:
         this.destroy();
         break;
+      case BubbleStates.snapped:
+        break;
+      default:
+        throw new Error("onCollideWorld : Unexpected condtion");
     }
   }
 
