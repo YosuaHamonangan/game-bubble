@@ -24,6 +24,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   shootingBubble: Bubble | null = null;
   bubbleGroup: Phaser.Physics.Arcade.Group;
   private bubbleTile: Bubble[][];
+  score: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -31,19 +32,30 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.initBubbleGroup();
     this.setEventArea();
     this.addShooter();
+
+    this.resetGrid();
     this.fillGrid();
   }
 
-  initBubbleGroup() {
-    this.bubbleTile = [];
+  resetGrid() {
+    this.bubbleTile = this.bubbleTile || [];
     for (let row = 0; row < Grid.rows; row++) {
-      this.bubbleTile[row] = [];
+      this.bubbleTile[row] = this.bubbleTile[row] || [];
+
       let cols = row % 2 ? Grid.cols - 1 : Grid.cols;
       for (let col = 0; col < cols; col++) {
+        // Remove all bubble from prev game
+        if (this.bubbleTile[row][col]) {
+          this.bubbleTile[row][col].destroy();
+        }
         this.bubbleTile[row][col] = null;
       }
     }
 
+    this.score = 0;
+  }
+
+  initBubbleGroup() {
     this.bubbleGroup = this.scene.physics.add.group({
       classType: Bubble,
       runChildUpdate: true,
@@ -78,25 +90,25 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    // for (let row = 0; row < 5; row++) {
-    //   this.bubbleTile[row].forEach((bubble, col) => {
-    //     this.addBubble(col, row, getRandomColor());
-    //   });
-    // }
-    // this.loadShootingBubble(BubbleColors.red);
+    for (let row = 0; row < 5; row++) {
+      this.bubbleTile[row].forEach((bubble, col) => {
+        this.addBubble(col, row, getRandomColor());
+      });
+    }
+    this.loadShootingBubble(BubbleColors.red);
 
     // For testing
-    this.addBubble(1, 0, BubbleColors.green);
-    this.addBubble(3, 1, BubbleColors.green);
-    this.addBubble(2, 0, BubbleColors.red);
-    this.addBubble(3, 0, BubbleColors.red);
-    this.addBubble(4, 0, BubbleColors.red);
-    this.addBubble(4, 1, BubbleColors.red);
-    this.addBubble(5, 2, BubbleColors.red);
-    this.addBubble(5, 3, BubbleColors.blue);
-    this.addBubble(5, 4, BubbleColors.blue);
-    this.addBubble(6, 4, BubbleColors.blue);
-    this.loadShootingBubble(BubbleColors.red);
+    // this.addBubble(1, 0, BubbleColors.green);
+    // this.addBubble(3, 1, BubbleColors.green);
+    // this.addBubble(2, 0, BubbleColors.red);
+    // this.addBubble(3, 0, BubbleColors.red);
+    // this.addBubble(4, 0, BubbleColors.red);
+    // this.addBubble(4, 1, BubbleColors.red);
+    // this.addBubble(5, 2, BubbleColors.red);
+    // this.addBubble(5, 3, BubbleColors.blue);
+    // this.addBubble(5, 4, BubbleColors.blue);
+    // this.addBubble(6, 4, BubbleColors.blue);
+    // this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -115,7 +127,16 @@ export default class Grid extends Phaser.GameObjects.Container {
   removeBubble(bubble: Bubble) {
     const { col, row } = bubble;
     this.setBubbleAt(null, col, row);
-    // this.bubbleGroup.remove(bubble);
+
+    this.calcScore(bubble);
+  }
+
+  calcScore(bubble: Bubble) {
+    this.score++;
+  }
+
+  getScore(): number {
+    return this.score;
   }
 
   addBubble(col: number, row: number, color: BubbleColors) {
@@ -168,7 +189,6 @@ export default class Grid extends Phaser.GameObjects.Container {
       this.searchCluster(col, 0, null, [], searchMap);
     });
 
-    console.log(searchMap);
     // Search all unmarked bubble searchMap
     const floatingBubbles = [];
     searchMap.forEach((r, row) =>
