@@ -2,9 +2,8 @@ export type PhaserConfig = Phaser.Types.Core.GameConfig;
 
 import LevelScene from "../Scene/LevelScene";
 import PreloadScene from "../Scene/PreloadScene";
-import TitleScene from "../Scene/TitleScene";
 
-import { getResolution } from "../Util/Util";
+import { DEFAULT_WIDTH, DEFAULT_HEIGHT } from "../Util/Constant";
 
 export const config: PhaserConfig = {
   title: "PhaserGame",
@@ -13,8 +12,8 @@ export const config: PhaserConfig = {
     parent: "phaser-app",
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: getResolution().width,
-    height: getResolution().height,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
   },
   physics: {
     default: "arcade",
@@ -24,5 +23,5 @@ export const config: PhaserConfig = {
     },
   },
   backgroundColor: "#493a52",
-  scene: [PreloadScene, TitleScene, LevelScene],
+  scene: [PreloadScene, LevelScene],
 };

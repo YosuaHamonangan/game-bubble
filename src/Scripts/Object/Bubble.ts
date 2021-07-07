@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import Grid from "./Grid";
-import { BubbleColors } from "../Util/Bubble";
+import { BubbleColors } from "../Util/BubbleUtil";
 
 export enum BubbleStates {
   idle,
@@ -26,9 +26,6 @@ const BODY_RADIUS = HALF_IMAGE_SIZE * 0.9;
 const SHOOTING_SPEED = 3000;
 
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
-  static size = 80;
-  static halfSize = Bubble.size / 2;
-
   state: BubbleStates;
   col: number = null;
   row: number = null;
@@ -64,7 +61,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     );
     this.body.onWorldBounds = true;
 
-    this.setScale(Bubble.size / IMAGE_SIZE);
+    this.setScale(Grid.bubbleSize / IMAGE_SIZE);
 
     // Default state
     this.state = BubbleStates.idle;
@@ -100,17 +97,19 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
 
   getTileCoordinate(col: number, row: number): ICoordinate {
     const x =
-      col * Bubble.size + (row % 2 ? Bubble.halfSize : 0) + Grid.offsetX;
-    const y = row * Bubble.size + Grid.offsetY;
+      col * Grid.bubbleSize +
+      (row % 2 ? Grid.halfBubbleSize : 0) +
+      Grid.offsetX;
+    const y = row * Grid.bubbleSize + Grid.offsetY;
     return { x, y };
   }
 
   getTilePosition(): IPosition {
     const row = Math.floor(
-      (this.y - Grid.offsetY + Bubble.halfSize) / Bubble.size
+      (this.y - Grid.offsetY + Grid.halfBubbleSize) / Grid.bubbleSize
     );
-    const offsetX = Grid.offsetX + (row % 2 ? Bubble.halfSize : 0);
-    var col = Math.round((this.x - offsetX) / Bubble.size);
+    const offsetX = Grid.offsetX + (row % 2 ? Grid.halfBubbleSize : 0);
+    var col = Math.round((this.x - offsetX) / Grid.bubbleSize);
 
     return { col, row };
   }

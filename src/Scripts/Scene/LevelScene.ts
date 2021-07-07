@@ -17,13 +17,50 @@ export default class LevelScene extends Phaser.Scene {
   preload(): void {}
 
   create(): void {
-    this.fpsText = new FpsText(this);
-    this.scoreText = new ScoreText(this, this.cameras.main.width - 10, 10);
+    // Header
+    const headerBg = this.add
+      .rectangle(0, 0, this.cameras.main.width, 100, 0x0000ff)
+      .setDepth(-1)
+      .setOrigin(0);
+    this.scoreText = new ScoreText(
+      this,
+      headerBg.getCenter().x,
+      headerBg.getCenter().y
+    );
+
+    // Main Section
+    const mainBg = this.add
+      .rectangle(
+        0,
+        headerBg.height,
+        this.cameras.main.width,
+        Grid.height,
+        0x0000aa
+      )
+      .setDepth(-1)
+      .setOrigin(0);
 
     const gridX = this.cameras.main.centerX;
-    const gridY = this.cameras.main.height - 100;
+    const gridY = mainBg.y + Grid.height;
     this.grid = new Grid(this, gridX, gridY);
     this.add.existing(this.grid);
+
+    // Footer
+    const footerBg = this.add
+      .rectangle(
+        0,
+        mainBg.getBottomLeft().y,
+        this.cameras.main.width,
+        this.cameras.main.height - mainBg.getBottomLeft().y,
+        0x000000
+      )
+      .setDepth(-1)
+      .setOrigin(0);
+    this.fpsText = new FpsText(
+      this,
+      footerBg.getBottomLeft().x + 10,
+      footerBg.getBottomLeft().y - 10
+    );
 
     this.gameOverPanel = new GameOverPanel(
       this,

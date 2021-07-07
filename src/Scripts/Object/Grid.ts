@@ -2,17 +2,20 @@ import * as Phaser from "phaser";
 import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
 import LevelScene from "../Scene/LevelScene";
-import { BubbleColors, getRandomColor } from "../Util/Bubble";
+import { BubbleColors, getRandomColor } from "../Util/BubbleUtil";
+import { DEFAULT_WIDTH } from "../Util/Constant";
 
 export default class Grid extends Phaser.GameObjects.Container {
   static cols = 8;
-  static rows = 12;
-  static width = Grid.cols * Bubble.size;
-  static height = (Grid.rows + 1) * Bubble.size;
+  static rows = 10;
+  static width = DEFAULT_WIDTH;
+  static bubbleSize = Grid.width / Grid.cols;
+  static halfBubbleSize = Grid.bubbleSize / 2;
+  static height = (Grid.rows + 1) * Grid.bubbleSize;
   static halfWidth = Grid.width / 2;
   static halfHeight = Grid.height / 2;
-  static offsetX = -Grid.halfWidth + Bubble.halfSize;
-  static offsetY = -Grid.height + Bubble.halfSize;
+  static offsetX = -Grid.halfWidth + Grid.halfBubbleSize;
+  static offsetY = -Grid.height + Grid.halfBubbleSize;
   static eventArea = new Phaser.Geom.Rectangle(
     -Grid.halfWidth,
     -Grid.height,
@@ -72,7 +75,8 @@ export default class Grid extends Phaser.GameObjects.Container {
         this.x - Grid.halfWidth,
         this.y - Grid.height,
         Grid.width,
-        Grid.height + Bubble.size
+        // Add height so that the loadded bubble not hit world bound
+        Grid.height + Grid.bubbleSize
       ),
       bounceX: 1,
       bounceY: 1,
@@ -253,8 +257,8 @@ export default class Grid extends Phaser.GameObjects.Container {
     if (this.scene.game.config.physics.arcade.debug) {
       const c = 0x6666ff;
       const graphics = new Phaser.GameObjects.Graphics(this.scene);
-      graphics.lineStyle(1, 0x00ff00, 1);
-      graphics.strokeRectShape(Grid.eventArea);
+      graphics.fillStyle(0x0000bb);
+      graphics.fillRectShape(Grid.eventArea);
       this.add(graphics);
     }
   }
