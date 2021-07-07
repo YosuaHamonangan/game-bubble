@@ -297,7 +297,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       row = Math.min(row, bubble.row + 1);
       row = Math.max(row, bubble.row - 1);
     }
-    col = Math.min(col, row % 2 ? Grid.cols - 1 : Grid.cols);
+    col = Math.min(col, row % 2 ? Grid.cols - 2 : Grid.cols - 1);
     col = Math.max(col, 0);
 
     this.shootingBubble.snapToPosition(col, row);
