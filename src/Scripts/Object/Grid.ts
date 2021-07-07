@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
+import LevelScene from "../Scene/LevelScene";
 import { BubbleColors, getRandomColor } from "../Util/Bubble";
 
 export default class Grid extends Phaser.GameObjects.Container {
@@ -25,6 +26,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   bubbleGroup: Phaser.Physics.Arcade.Group;
   private bubbleTile: Bubble[][];
   score: number;
+  isGameOver: boolean;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -34,7 +36,6 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.addShooter();
 
     this.resetGrid();
-    this.fillGrid();
   }
 
   resetGrid() {
@@ -46,13 +47,20 @@ export default class Grid extends Phaser.GameObjects.Container {
       for (let col = 0; col < cols; col++) {
         // Remove all bubble from prev game
         if (this.bubbleTile[row][col]) {
-          this.bubbleGroup.killAndHide(this.bubbleTile[row][col]);
+          this.bubbleTile[row][col].destroy();
         }
         this.bubbleTile[row][col] = null;
       }
     }
 
+    if (this.shootingBubble) {
+      this.shootingBubble.destroy();
+    }
+
     this.score = 0;
+    this.isGameOver = false;
+
+    this.fillGrid();
   }
 
   initBubbleGroup() {
@@ -84,25 +92,25 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    // for (let row = 0; row < 5; row++) {
-    //   this.bubbleTile[row].forEach((bubble, col) => {
-    //     this.addBubble(col, row, getRandomColor());
-    //   });
-    // }
-    // this.loadShootingBubble();
+    for (let row = 0; row < 5; row++) {
+      this.bubbleTile[row].forEach((bubble, col) => {
+        this.addBubble(col, row, getRandomColor());
+      });
+    }
+    this.loadShootingBubble();
 
     // For testing
-    this.addBubble(1, 0, BubbleColors.red);
-    this.addBubble(3, 1, BubbleColors.green);
-    this.addBubble(2, 0, BubbleColors.red);
-    this.addBubble(3, 0, BubbleColors.red);
-    this.addBubble(4, 0, BubbleColors.red);
-    this.addBubble(4, 1, BubbleColors.red);
-    this.addBubble(5, 2, BubbleColors.red);
-    this.addBubble(5, 3, BubbleColors.blue);
-    this.addBubble(5, 4, BubbleColors.blue);
-    this.addBubble(6, 4, BubbleColors.blue);
-    this.loadShootingBubble(BubbleColors.red);
+    // this.addBubble(1, 0, BubbleColors.red);
+    // this.addBubble(3, 1, BubbleColors.green);
+    // this.addBubble(2, 0, BubbleColors.red);
+    // this.addBubble(3, 0, BubbleColors.red);
+    // this.addBubble(4, 0, BubbleColors.red);
+    // this.addBubble(4, 1, BubbleColors.red);
+    // this.addBubble(5, 2, BubbleColors.red);
+    // this.addBubble(5, 3, BubbleColors.blue);
+    // this.addBubble(5, 4, BubbleColors.blue);
+    // this.addBubble(6, 4, BubbleColors.blue);
+    // this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -232,10 +240,12 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.setInteractive(Grid.eventArea, Phaser.Geom.Rectangle.Contains);
 
     this.on("pointermove", (pointer, x, y) => {
+      if (this.isGameOver) return;
       this.shooter.setTarget(x, y);
     });
 
     this.on("pointerup", (pointer, x, y) => {
+      if (this.isGameOver) return;
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
     });
@@ -290,9 +300,10 @@ export default class Grid extends Phaser.GameObjects.Container {
     col = Math.min(col, row % 2 ? Grid.cols - 1 : Grid.cols);
     col = Math.max(col, 0);
 
-    if (row >= Grid.rows) return console.log("game over");
-
     this.shootingBubble.snapToPosition(col, row);
+    if (row >= Grid.rows) {
+      return this.gameOver();
+    }
     this.setBubbleAt(this.shootingBubble, col, row);
 
     const cluster = this.getCluster(col, row);
@@ -311,5 +322,16 @@ export default class Grid extends Phaser.GameObjects.Container {
     });
 
     this.loadShootingBubble();
+  }
+
+  gameOver() {
+    this.isGameOver = true;
+
+    if (this.scene instanceof LevelScene) {
+      const scene = this.scene as LevelScene;
+      scene.onGameOver();
+    } else {
+      console.warn("Grid is not in LevelScene");
+    }
   }
 }

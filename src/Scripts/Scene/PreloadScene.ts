@@ -13,12 +13,16 @@ const spritesheets: Phaser.Types.Loader.FileTypes.SpriteSheetFileConfig[] = [
 ];
 const images: Phaser.Types.Loader.FileTypes.ImageFileConfig[] = [
   {
-    key: "shopee",
-    url: "/Image/shopee.png",
-  },
-  {
     key: "arrow",
     url: "/Image/arrow.png",
+  },
+  {
+    key: "replay",
+    url: "/Image/Replay.png",
+  },
+  {
+    key: "panel",
+    url: "/Image/Panel.png",
   },
 ];
 
