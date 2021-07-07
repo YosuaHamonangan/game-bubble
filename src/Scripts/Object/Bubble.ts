@@ -2,6 +2,13 @@ import * as Phaser from "phaser";
 import Grid from "./Grid";
 import { BubbleColors } from "../Util/Bubble";
 
+export enum BubbleStates {
+  idle,
+  snapped,
+  moving,
+  droping,
+}
+
 interface ICoordinate {
   x: number;
   y: number;
@@ -19,8 +26,8 @@ const SHOOTING_SPEED = 3000;
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   static size = 80;
   static halfSize = Bubble.size / 2;
-  isSnapped = false;
-  isShooting = false;
+
+  state: BubbleStates;
   col: number = null;
   row: number = null;
   private _x: number;
@@ -53,8 +60,12 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
       this.width / 2 - HALF_IMAGE_SIZE,
       this.height / 2 - HALF_IMAGE_SIZE
     );
+    this.body.onWorldBounds = true;
 
     this.setScale(Bubble.size / IMAGE_SIZE);
+
+    // Default state
+    this.state = BubbleStates.idle;
   }
 
   setColor(color: BubbleColors) {
@@ -66,8 +77,6 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   }
 
   snapToPosition(col: number, row: number) {
-    this.isShooting = false;
-
     const { x, y } = this.getTileCoordinate(col, row);
     this.body.reset(x, y);
 
@@ -77,8 +86,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this._x = x;
     this._y = y;
 
-    this.isShooting = false;
-    this.isSnapped = true;
+    this.state = BubbleStates.snapped;
   }
 
   snapToClosest(): IPosition {
@@ -91,8 +99,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     const vel = new Phaser.Math.Vector2(SHOOTING_SPEED, 0);
     vel.rotate(angle);
     this.setVelocity(vel.x, vel.y);
-    this.isShooting = true;
-    this.isSnapped = false;
+    this.state = BubbleStates.moving;
   }
 
   getTileCoordinate(col: number, row: number): ICoordinate {
@@ -123,17 +130,20 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     const GRAVITY = 1000;
     this.setGravityY(GRAVITY);
     this.setVelocityX((0.5 - Math.random()) * 1000);
-    this.isSnapped = false;
-    this.body.onWorldBounds = true;
+    this.state = BubbleStates.droping;
   }
 
   // Only called when dropped
-  onCollideWorld() {
-    this.destroy();
+  onCollideWorld(up: boolean, down: boolean, left: boolean, right: boolean) {
+    switch (this.state) {
+      case BubbleStates.droping:
+        this.destroy();
+        break;
+    }
   }
 
   update() {
-    if (this.isSnapped) {
+    if (this.state === BubbleStates.snapped) {
       const SNAPPING_SPEED = 5;
       const velX = (this._x - this.x) * SNAPPING_SPEED;
       const velY = (this._y - this.y) * SNAPPING_SPEED;

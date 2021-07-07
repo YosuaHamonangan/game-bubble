@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import Bubble from "./Bubble";
+import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
 import { BubbleColors, getRandomColor } from "../Util/Bubble";
 
@@ -72,9 +72,19 @@ export default class Grid extends Phaser.GameObjects.Container {
 
     this.scene.physics.world.on(
       Phaser.Physics.Arcade.Events.WORLD_BOUNDS,
-      (body: Phaser.Physics.Arcade.Body) => {
+      (
+        body: Phaser.Physics.Arcade.Body,
+        up: boolean,
+        down: boolean,
+        left: boolean,
+        right: boolean
+      ) => {
         const bubble = body.gameObject as Bubble;
-        bubble.onCollideWorld();
+        if (bubble === this.shootingBubble) {
+          if (up) this.onHit();
+        } else {
+          bubble.onCollideWorld(up, down, left, right);
+        }
       }
     );
 
@@ -95,10 +105,10 @@ export default class Grid extends Phaser.GameObjects.Container {
         this.addBubble(col, row, getRandomColor());
       });
     }
-    this.loadShootingBubble(BubbleColors.red);
+    this.loadShootingBubble();
 
     // For testing
-    // this.addBubble(1, 0, BubbleColors.green);
+    // this.addBubble(1, 0, BubbleColors.red);
     // this.addBubble(3, 1, BubbleColors.green);
     // this.addBubble(2, 0, BubbleColors.red);
     // this.addBubble(3, 0, BubbleColors.red);
@@ -153,6 +163,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   shootBubble(angle: number) {
+    if (this.shootingBubble.state === BubbleStates.moving) return;
     this.shootingBubble.shoot(angle);
   }
 
