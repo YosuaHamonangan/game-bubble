@@ -27,8 +27,9 @@ const SHOOTING_SPEED = 3000;
 
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   state: BubbleStates;
-  col: number = null;
-  row: number = null;
+  col: number;
+  row: number;
+  grid: Grid;
   private _x: number;
   private _y: number;
   body: Phaser.Physics.Arcade.Body;
@@ -51,8 +52,6 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
       repeat: 0,
     });
 
-    this.play("idle");
-
     this.scene.physics.add.existing(this);
     this.body.setCircle(
       BODY_RADIUS,
@@ -62,9 +61,24 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this.body.onWorldBounds = true;
 
     this.setScale(Grid.bubbleSize / IMAGE_SIZE);
+  }
+
+  reset() {
+    this.enableBody(true, 0, 0, true, true);
+    this.setActive(true);
+    this.setVisible(true);
 
     // Default state
+    this.play("idle");
     this.state = BubbleStates.idle;
+  }
+
+  kill() {
+    this.disableBody(true, true);
+  }
+
+  setGrid(grid: Grid) {
+    this.grid = grid;
   }
 
   setColor(color: BubbleColors) {
@@ -114,33 +128,39 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     return { col, row };
   }
 
-  pop() {
-    this.scene.sound.play("pop");
-    this.anims.complete;
-    this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      this.destroy();
+  async pop(): Promise<void> {
+    this.disableBody();
+    return new Promise((resolve) => {
+      this.scene.sound.play("pop");
+      this.anims.complete;
+      this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        resolve();
+      });
+      this.play("pop");
     });
-    this.play("pop");
   }
 
-  drop() {
+  async drop(): Promise<void> {
     const GRAVITY = 1000;
     this.setGravityY(GRAVITY);
     this.setVelocityX((0.5 - Math.random()) * 1000);
+    this.setVelocityY(10);
     this.state = BubbleStates.droping;
-  }
 
-  // Only called when dropped
-  onCollideWorld(up: boolean, down: boolean, left: boolean, right: boolean) {
-    switch (this.state) {
-      case BubbleStates.droping:
-        this.destroy();
-        break;
-      case BubbleStates.snapped:
-        break;
-      default:
-        throw new Error("onCollideWorld : Unexpected condtion");
-    }
+    // Wait until collide with world
+    this.setCollideWorldBounds(true);
+    this.body.onWorldBounds = true;
+    return new Promise((resolve) => {
+      const onWorldBounds = (body) => {
+        if (body === this.body) {
+          this.setCollideWorldBounds(false);
+          this.body.world.off("worldbounds", onWorldBounds);
+          resolve();
+        }
+      };
+
+      this.body.world.on("worldbounds", onWorldBounds);
+    });
   }
 
   update() {

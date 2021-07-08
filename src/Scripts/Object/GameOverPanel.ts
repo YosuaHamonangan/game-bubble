@@ -33,7 +33,8 @@ export default class GameOverPanel extends Phaser.GameObjects.Container {
     replayButton.setScale(0.5);
     this.add(replayButton);
     replayButton.setInteractive();
-    replayButton.on("pointerdown", () => {
+    replayButton.on("pointerup", (pointer, x, y, evt) => {
+      evt.stopPropagation();
       config.onReplay();
     });
   }
