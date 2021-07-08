@@ -22,6 +22,10 @@ export default class Grid extends Phaser.GameObjects.Container {
     Grid.width,
     Grid.height
   );
+  static topLine = Grid.eventArea.getLineA();
+  static rightLine = Grid.eventArea.getLineB();
+  static leftLine = Grid.eventArea.getLineD();
+
   static minCluster = 3;
 
   shooter: Shooter;
@@ -103,7 +107,7 @@ export default class Grid extends Phaser.GameObjects.Container {
         this.addBubble(col, row, getRandomColor());
       });
     }
-    this.loadShootingBubble(BubbleColors.orange);
+    this.loadShootingBubble();
 
     // For testing
     // this.addBubble(1, 0, BubbleColors.red);
@@ -302,30 +306,48 @@ export default class Grid extends Phaser.GameObjects.Container {
     return result;
   }
 
+  findIntersectingWorld(line: Phaser.Geom.Line) {
+    let point;
+
+    // Check top
+    point = Phaser.Geom.Intersects.GetLineToLine(line, Grid.topLine);
+
+    // Check left or right
+    if (!point) {
+      const checkLine = line.x2 < 0 ? Grid.leftLine : Grid.rightLine;
+      point = Phaser.Geom.Intersects.GetLineToLine(line, checkLine);
+    }
+
+    if (!point) {
+      throw new TypeError("findIntersectingWorld failed");
+    }
+
+    line.x2 = point.x;
+    line.y2 = point.y;
+  }
+
   drawGuideLine(angle) {
-    // // Draw guide line
+    // Draw guide line
     this.guideLine.clear();
+
     this.guideLine.lineStyle(4, 0xffffff);
     const line = new Phaser.Geom.Line(0, 0, 0, 0);
     const verticalLine = new Phaser.Geom.Line(0, -Grid.height, 0, Grid.height);
+
     for (var i = 0; i < 3; i++) {
       const { x2, y2 } = line;
       Phaser.Geom.Line.SetToAngle(line, x2, y2, angle, 2 * Grid.height);
+
       const bubble = this.findIntersectingBubble(line);
       if (bubble) {
         this.guideLine.strokeLineShape(line);
         return;
       }
 
-      const points = Phaser.Geom.Intersects.GetLineToRectangle(
-        line,
-        Grid.eventArea
-      );
-
-      const point = angle < Phaser.Math.DegToRad(270) ? points[1] : points[0];
-      line.x2 = point.x;
-      line.y2 = point.y;
+      this.findIntersectingWorld(line);
       this.guideLine.strokeLineShape(line);
+
+      if (Math.round(line.y2) == -Grid.height) return;
 
       angle = Phaser.Geom.Line.ReflectAngle(line, verticalLine);
       if (angle < 0) angle += Math.PI * 2;
