@@ -30,6 +30,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   private bubbleTile: (Bubble | null)[][];
   score: number;
   isGameOver: boolean;
+  guideLine: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -97,25 +98,25 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    for (let row = 0; row < 5; row++) {
-      this.bubbleTile[row].forEach((bubble, col) => {
-        this.addBubble(col, row, getRandomColor());
-      });
-    }
-    this.loadShootingBubble(BubbleColors.orange);
+    // for (let row = 0; row < 5; row++) {
+    //   this.bubbleTile[row].forEach((bubble, col) => {
+    //     this.addBubble(col, row, getRandomColor());
+    //   });
+    // }
+    // this.loadShootingBubble(BubbleColors.orange);
 
     // For testing
-    // this.addBubble(1, 0, BubbleColors.red);
-    // this.addBubble(3, 1, BubbleColors.green);
-    // this.addBubble(2, 0, BubbleColors.red);
-    // this.addBubble(3, 0, BubbleColors.red);
-    // this.addBubble(4, 0, BubbleColors.red);
-    // this.addBubble(4, 1, BubbleColors.red);
-    // this.addBubble(5, 2, BubbleColors.red);
-    // this.addBubble(5, 3, BubbleColors.blue);
-    // this.addBubble(5, 4, BubbleColors.blue);
-    // this.addBubble(6, 4, BubbleColors.blue);
-    // this.loadShootingBubble(BubbleColors.red);
+    this.addBubble(1, 0, BubbleColors.red);
+    this.addBubble(3, 1, BubbleColors.green);
+    this.addBubble(2, 0, BubbleColors.red);
+    this.addBubble(3, 0, BubbleColors.red);
+    this.addBubble(4, 0, BubbleColors.red);
+    this.addBubble(4, 1, BubbleColors.red);
+    this.addBubble(5, 2, BubbleColors.red);
+    this.addBubble(5, 3, BubbleColors.blue);
+    this.addBubble(5, 4, BubbleColors.blue);
+    this.addBubble(6, 4, BubbleColors.blue);
+    this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -201,9 +202,11 @@ export default class Grid extends Phaser.GameObjects.Container {
 
   addShooter() {
     const shooter = new Shooter(this.scene, 0, 0);
-    shooter.setDepth(1);
     this.add(shooter);
     this.shooter = shooter;
+
+    this.guideLine = new Phaser.GameObjects.Graphics(this.scene);
+    this.add(this.guideLine);
   }
 
   getCluster(col: number, row: number): Bubble[] {
@@ -269,9 +272,64 @@ export default class Grid extends Phaser.GameObjects.Container {
     return cluster;
   }
 
-  rotateShootingBubble(angle: number) {
+  setShootingAngle(angle: number) {
     if (this.shootingBubble) {
-      this.shootingBubble.setRotation(angle);
+      this.shootingBubble.setRotation(angle + Math.PI / 2);
+    }
+  }
+
+  findIntersectingBubble(line: Phaser.Geom.Line): Bubble | null {
+    this.guideLine.lineStyle(4, 0xffffff);
+
+    const bubbles = [...this.bubbleGroup.getChildren()] as Bubble[];
+    // Remove shooting bubble
+    bubbles.pop();
+
+    let result: Bubble | null = null;
+    bubbles.forEach((bubble) => {
+      const circle = new Phaser.Geom.Circle(
+        bubble.x,
+        bubble.y,
+        Grid.halfBubbleSize
+      );
+      const [point] = Phaser.Geom.Intersects.GetLineToCircle(line, circle);
+      if (point) {
+        line.setTo(line.x1, line.y1, point.x, point.y);
+        result = bubble;
+      }
+    });
+    return result;
+  }
+
+  drawGuideLine(angle) {
+    // // Draw guide line
+    this.guideLine.clear();
+    this.guideLine.lineStyle(4, 0xffffff);
+    const line = new Phaser.Geom.Line();
+    const verticalLine = new Phaser.Geom.Line(0, 0, 0, 1);
+    let startingPoint = { x: 0, y: 0 };
+    for (var i = 0; i < 3; i++) {
+      const { x, y } = startingPoint;
+      Phaser.Geom.Line.SetToAngle(line, x, y, angle, 2 * Grid.height);
+      const bubble = this.findIntersectingBubble(line);
+      if (bubble) {
+        this.guideLine.strokeLineShape(line);
+        return;
+      }
+      const [point1, point2] = Phaser.Geom.Intersects.GetLineToRectangle(
+        line,
+        Grid.eventArea
+      );
+
+      if (point1.x === x && point1.y === y) {
+        startingPoint = point2;
+      } else {
+        startingPoint = point1;
+      }
+
+      line.setTo(x, y, startingPoint.x, startingPoint.y);
+      angle = Phaser.Geom.Line.ReflectAngle(line, verticalLine);
+      this.guideLine.strokeLineShape(line);
     }
   }
 
@@ -282,19 +340,20 @@ export default class Grid extends Phaser.GameObjects.Container {
       if (this.isGameOver) return;
       this.shooter.setTarget(x, y);
       const angle = this.shooter.getAngle();
-      this.rotateShootingBubble(angle + Math.PI / 2);
+      this.setShootingAngle(angle);
     });
 
     this.on("pointermove", (pointer, x, y) => {
       if (this.isGameOver) return;
       this.shooter.setTarget(x, y);
       const angle = this.shooter.getAngle();
-      this.rotateShootingBubble(angle + Math.PI / 2);
+      this.setShootingAngle(angle);
+      this.drawGuideLine(angle);
     });
 
     this.on("pointerup", (pointer, x, y) => {
       if (this.isGameOver) return;
-      this.rotateShootingBubble(0);
+      this.setShootingAngle(-Math.PI / 2);
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
     });
