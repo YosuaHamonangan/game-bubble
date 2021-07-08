@@ -98,25 +98,25 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    // for (let row = 0; row < 5; row++) {
-    //   this.bubbleTile[row].forEach((bubble, col) => {
-    //     this.addBubble(col, row, getRandomColor());
-    //   });
-    // }
-    // this.loadShootingBubble(BubbleColors.orange);
+    for (let row = 0; row < 5; row++) {
+      this.bubbleTile[row].forEach((bubble, col) => {
+        this.addBubble(col, row, getRandomColor());
+      });
+    }
+    this.loadShootingBubble(BubbleColors.orange);
 
     // For testing
-    this.addBubble(1, 0, BubbleColors.red);
-    this.addBubble(3, 1, BubbleColors.green);
-    this.addBubble(2, 0, BubbleColors.red);
-    this.addBubble(3, 0, BubbleColors.red);
-    this.addBubble(4, 0, BubbleColors.red);
-    this.addBubble(4, 1, BubbleColors.red);
-    this.addBubble(5, 2, BubbleColors.red);
-    this.addBubble(5, 3, BubbleColors.blue);
-    this.addBubble(5, 4, BubbleColors.blue);
-    this.addBubble(6, 4, BubbleColors.blue);
-    this.loadShootingBubble(BubbleColors.red);
+    // this.addBubble(1, 0, BubbleColors.red);
+    // this.addBubble(3, 1, BubbleColors.green);
+    // this.addBubble(2, 0, BubbleColors.red);
+    // this.addBubble(3, 0, BubbleColors.red);
+    // this.addBubble(4, 0, BubbleColors.red);
+    // this.addBubble(4, 1, BubbleColors.red);
+    // this.addBubble(5, 2, BubbleColors.red);
+    // this.addBubble(5, 3, BubbleColors.blue);
+    // this.addBubble(5, 4, BubbleColors.blue);
+    // this.addBubble(6, 4, BubbleColors.blue);
+    // this.loadShootingBubble(BubbleColors.red);
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
