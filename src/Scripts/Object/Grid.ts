@@ -282,11 +282,12 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.guideLine.lineStyle(4, 0xffffff);
 
     const bubbles = [...this.bubbleGroup.getChildren()] as Bubble[];
-    // Remove shooting bubble
-    bubbles.pop();
 
     let result: Bubble | null = null;
     bubbles.forEach((bubble) => {
+      if (!bubble.active) return;
+      if (bubble === this.shootingBubble) return;
+
       const circle = new Phaser.Geom.Circle(
         bubble.x,
         bubble.y,
@@ -305,31 +306,29 @@ export default class Grid extends Phaser.GameObjects.Container {
     // // Draw guide line
     this.guideLine.clear();
     this.guideLine.lineStyle(4, 0xffffff);
-    const line = new Phaser.Geom.Line();
-    const verticalLine = new Phaser.Geom.Line(0, 0, 0, 1);
-    let startingPoint = { x: 0, y: 0 };
+    const line = new Phaser.Geom.Line(0, 0, 0, 0);
+    const verticalLine = new Phaser.Geom.Line(0, -Grid.height, 0, Grid.height);
     for (var i = 0; i < 3; i++) {
-      const { x, y } = startingPoint;
-      Phaser.Geom.Line.SetToAngle(line, x, y, angle, 2 * Grid.height);
+      const { x2, y2 } = line;
+      Phaser.Geom.Line.SetToAngle(line, x2, y2, angle, 2 * Grid.height);
       const bubble = this.findIntersectingBubble(line);
       if (bubble) {
         this.guideLine.strokeLineShape(line);
         return;
       }
-      const [point1, point2] = Phaser.Geom.Intersects.GetLineToRectangle(
+
+      const points = Phaser.Geom.Intersects.GetLineToRectangle(
         line,
         Grid.eventArea
       );
 
-      if (point1.x === x && point1.y === y) {
-        startingPoint = point2;
-      } else {
-        startingPoint = point1;
-      }
-
-      line.setTo(x, y, startingPoint.x, startingPoint.y);
-      angle = Phaser.Geom.Line.ReflectAngle(line, verticalLine);
+      const point = angle < Phaser.Math.DegToRad(270) ? points[1] : points[0];
+      line.x2 = point.x;
+      line.y2 = point.y;
       this.guideLine.strokeLineShape(line);
+
+      angle = Phaser.Geom.Line.ReflectAngle(line, verticalLine);
+      if (angle < 0) angle += Math.PI * 2;
     }
   }
 
