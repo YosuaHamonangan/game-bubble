@@ -269,21 +269,32 @@ export default class Grid extends Phaser.GameObjects.Container {
     return cluster;
   }
 
+  rotateShootingBubble(angle: number) {
+    if (this.shootingBubble) {
+      this.shootingBubble.setRotation(angle);
+    }
+  }
+
   setEventArea() {
     this.setInteractive(Grid.eventArea, Phaser.Geom.Rectangle.Contains);
 
     this.on("pointerdown", (pointer, x, y) => {
       if (this.isGameOver) return;
       this.shooter.setTarget(x, y);
+      const angle = this.shooter.getAngle();
+      this.rotateShootingBubble(angle + Math.PI / 2);
     });
 
     this.on("pointermove", (pointer, x, y) => {
       if (this.isGameOver) return;
       this.shooter.setTarget(x, y);
+      const angle = this.shooter.getAngle();
+      this.rotateShootingBubble(angle + Math.PI / 2);
     });
 
     this.on("pointerup", (pointer, x, y) => {
       if (this.isGameOver) return;
+      this.rotateShootingBubble(0);
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
     });
