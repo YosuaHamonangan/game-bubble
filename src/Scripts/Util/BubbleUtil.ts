@@ -14,3 +14,14 @@ export function getRandomColor(): BubbleColors {
   const key = ColorKeys[i];
   return BubbleColors[key];
 }
+
+export const colorInitials = {
+  r: BubbleColors.red,
+  b: BubbleColors.blue,
+  g: BubbleColors.green,
+  c: BubbleColors.cyan,
+  o: BubbleColors.orange,
+  p: BubbleColors.purple,
+  y: BubbleColors.yellow,
+  n: null,
+};

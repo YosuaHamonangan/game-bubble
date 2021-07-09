@@ -2,8 +2,18 @@ import * as Phaser from "phaser";
 import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
 import LevelScene from "../Scene/LevelScene";
-import { BubbleColors, getRandomColor } from "../Util/BubbleUtil";
+import {
+  BubbleColors,
+  getRandomColor,
+  colorInitials,
+} from "../Util/BubbleUtil";
 import { DEFAULT_WIDTH } from "../Util/Constant";
+
+export enum GridStates {
+  ready,
+  shooting,
+  gameOver,
+}
 
 export default class Grid extends Phaser.GameObjects.Container {
   static cols = 8;
@@ -33,7 +43,7 @@ export default class Grid extends Phaser.GameObjects.Container {
   bubbleGroup: Phaser.Physics.Arcade.Group;
   private bubbleTile: (Bubble | null)[][];
   score: number;
-  isGameOver: boolean;
+  state: GridStates;
   guideLine: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -55,50 +65,30 @@ export default class Grid extends Phaser.GameObjects.Container {
       let cols = row % 2 ? Grid.cols - 1 : Grid.cols;
       for (let col = 0; col < cols; col++) {
         // Remove all bubble from prev game
-        if (this.bubbleTile[row][col]) {
-          this.bubbleTile[row][col]!.destroy();
-        }
         this.bubbleTile[row][col] = null;
       }
     }
+    // Kill all bubble from prev game
+    this.bubbleGroup.getChildren().forEach((bubble) => {
+      (bubble as Bubble).kill();
+    });
 
     if (this.shootingBubble) {
       this.shootingBubble.destroy();
     }
 
-    this.score = 0;
-    this.isGameOver = false;
-
     this.fillGrid();
+
+    this.score = 0;
+    this.state = GridStates.ready;
   }
 
   initBubbleGroup() {
     const config: Phaser.Types.Physics.Arcade.PhysicsGroupConfig = {
       classType: Bubble,
       runChildUpdate: true,
-      collideWorldBounds: true,
-      customBoundsRectangle: new Phaser.Geom.Rectangle(
-        this.x - Grid.halfWidth,
-        this.y - Grid.height,
-        Grid.width,
-        // Add height so that the loadded bubble not hit world bound
-        Grid.height + Grid.bubbleSize
-      ),
-      bounceX: 1,
-      bounceY: 1,
     };
     this.bubbleGroup = this.scene.physics.add.group(config);
-
-    this.scene.physics.world.on(
-      Phaser.Physics.Arcade.Events.WORLD_BOUNDS,
-      this.OnBubbleWorldCollision.bind(this)
-    );
-
-    this.scene.physics.add.collider(
-      this.bubbleGroup,
-      this.bubbleGroup,
-      (b1, b2) => this.OnBubbleBubbleCollision(b1 as Bubble, b2 as Bubble)
-    );
   }
 
   fillGrid() {
@@ -110,17 +100,50 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.loadShootingBubble();
 
     // For testing
-    // this.addBubble(1, 0, BubbleColors.red);
-    // this.addBubble(3, 1, BubbleColors.green);
-    // this.addBubble(2, 0, BubbleColors.red);
-    // this.addBubble(3, 0, BubbleColors.red);
-    // this.addBubble(4, 0, BubbleColors.red);
-    // this.addBubble(4, 1, BubbleColors.red);
-    // this.addBubble(5, 2, BubbleColors.red);
-    // this.addBubble(5, 3, BubbleColors.blue);
-    // this.addBubble(5, 4, BubbleColors.blue);
-    // this.addBubble(6, 4, BubbleColors.blue);
-    // this.loadShootingBubble(BubbleColors.red);
+    const { r, b, g, c, o, p, y, n } = colorInitials;
+
+    // this.fillTest([
+    //   [n, b, b, b, b, n, n, n],
+    //   [n, n, r, n, b, n, n],
+    //   [n, n, n, n, n, b, n, n],
+    //   [n, n, n, n, r, n, n],
+    // ]);
+    // this.loadShootingBubble(BubbleColors.blue);
+
+    // this.fillTest([
+    //   [p, c, r, b, r, y, b, y],
+    //   [y, b, b, b, o, y, c],
+    //   [y, y, p, r, r, r, g, p],
+    //   [b, g, c, c, y, r, g],
+    //   [r, b, g, g, p, y, b, b],
+    //   [c],
+    //   [r, c],
+    // ]);
+    // this.loadShootingBubble(BubbleColors.blue);
+
+    // this.fillTest([
+    //   [y, r, g, r, b, r, y, c],
+    //   [c, g, c, b, r, b, y],
+    //   [o, p, o, g, g, c, g, y],
+    //   [y, b, y, c, b, o, c],
+    //   [r, g, g, c, r, p, r, b],
+    //   [y, b, n, b, p, o],
+    //   [b, n, r, c, n, n, c],
+    //   [o, n, c, b, y],
+    //   [n, o, b, n, n, y],
+    //   [n, n, o, n, g],
+    // ]);
+    // this.loadShootingBubble(BubbleColors.orange);
+    // const angle = 5.112735053460839;
+    // this.shootBubble(angle);
+  }
+
+  fillTest(arr) {
+    arr.forEach((ro, row) => {
+      ro.forEach((co, col) => {
+        if (co) this.addBubble(col, row, co);
+      });
+    });
   }
 
   getBubbleAt(col: number, row: number): Bubble | null | undefined {
@@ -129,18 +152,20 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   registerBubbleAt(bubble: Bubble | null, col: number, row: number) {
-    if (typeof this.bubbleTile[row][col] === "undefined") {
-      throw new TypeError(
+    if (row > Grid.rows || typeof this.bubbleTile[row][col] === "undefined") {
+      return console.error(
         `registerBubbleAt : col=${col}, row=${row} is not valid`
       );
     }
 
     // console.log(`Registering bubble at col=${col}, row=${row}`);
-
-    this.bubbleTile[row][col] = bubble;
     if (bubble) {
+      if (this.bubbleTile[row][col]) {
+        throw Error("registerBubbleAt : position already filled");
+      }
       bubble.snapToPosition(col, row);
     }
+    this.bubbleTile[row][col] = bubble;
   }
 
   createBubble(): Bubble {
@@ -184,10 +209,21 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.removeBubble(bubble);
   }
 
-  shootBubble(angle: number) {
-    if (!this.shootingBubble) return;
-    if (this.shootingBubble.state === BubbleStates.moving) return;
-    this.shootingBubble.shoot(angle);
+  async shootBubble(angle: number) {
+    if (!this.shootingBubble) {
+      throw new TypeError(
+        "shootBubble : Unexpected condition - no shooting bubble"
+      );
+    }
+
+    if (this.state !== GridStates.ready) {
+      throw new TypeError(
+        "shootBubble : Unexpected condition - Grid not ready"
+      );
+    }
+    this.state = GridStates.shooting;
+    const bubble = await this.shootingBubble.shoot(angle);
+    this.onHit(bubble);
   }
 
   loadShootingBubble(color = getRandomColor()) {
@@ -358,14 +394,14 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.setInteractive(Grid.eventArea, Phaser.Geom.Rectangle.Contains);
 
     this.on("pointerdown", (pointer, x, y) => {
-      if (this.isGameOver) return;
+      if (this.state !== GridStates.ready) return;
       this.shooter.setTarget(x, y);
       const angle = this.shooter.getAngle();
       this.setShootingAngle(angle);
     });
 
     this.on("pointermove", (pointer, x, y) => {
-      if (this.isGameOver) return;
+      if (this.state !== GridStates.ready) return;
       this.shooter.setTarget(x, y);
       const angle = this.shooter.getAngle();
       this.setShootingAngle(angle);
@@ -373,34 +409,11 @@ export default class Grid extends Phaser.GameObjects.Container {
     });
 
     this.on("pointerup", (pointer, x, y) => {
-      if (this.isGameOver) return;
+      if (this.state !== GridStates.ready) return;
       this.setShootingAngle(-Math.PI / 2);
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
     });
-  }
-
-  OnBubbleBubbleCollision(b1: Bubble, b2: Bubble) {
-    if (b1 === this.shootingBubble || b2 === this.shootingBubble) {
-      const otherBubble = b1 === this.shootingBubble ? b2 : b1;
-
-      if (this.shootingBubble.state === BubbleStates.moving) {
-        this.onHit(otherBubble);
-      } else if (this.shootingBubble.state === BubbleStates.idle) {
-        // For when dropped bubble hit loadded bubble
-        otherBubble.pop();
-      } else {
-        throw new TypeError("OnBubbleBubbleCollision : Unexpected condition");
-      }
-    }
-  }
-
-  OnBubbleWorldCollision(body: Phaser.Physics.Arcade.Body, up: boolean) {
-    // Shooting bubble hit ceiling
-    const bubble = body.gameObject as Bubble;
-    if (bubble === this.shootingBubble && up) {
-      this.onHit(null);
-    }
   }
 
   onHit(bubble: Bubble | null) {
@@ -410,18 +423,18 @@ export default class Grid extends Phaser.GameObjects.Container {
 
     let { col, row } = this.shootingBubble.getTilePosition();
     if (bubble) {
-      col = bubble.col;
-      if (row === bubble.row) {
-        col += this.shootingBubble.x > bubble.x ? 1 : -1;
-      } else {
-        if (row % 2) {
-          col += this.shootingBubble.x > bubble.x ? 0 : -1;
-        } else {
-          col += this.shootingBubble.x > bubble.x ? 1 : 0;
-        }
-      }
+      // col = bubble.col;
+      // if (row === bubble.row) {
+      //   col += this.shootingBubble.x > bubble.x ? 1 : -1;
+      // } else {
+      //   if (row % 2) {
+      //     col += this.shootingBubble.x > bubble.x ? 0 : -1;
+      //   } else {
+      //     col += this.shootingBubble.x > bubble.x ? 1 : 0;
+      //   }
+      // }
     } else {
-      console.log("adsadsasd");
+      console.log("Hit top");
       row = 0;
     }
 
@@ -447,10 +460,11 @@ export default class Grid extends Phaser.GameObjects.Container {
     });
 
     this.loadShootingBubble();
+    this.state = GridStates.ready;
   }
 
   gameOver() {
-    this.isGameOver = true;
+    this.state = GridStates.gameOver;
 
     if (this.scene instanceof LevelScene) {
       const scene = this.scene as LevelScene;
