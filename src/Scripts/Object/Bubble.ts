@@ -15,16 +15,6 @@ export enum BubbleStates {
   droping,
 }
 
-interface ICoordinate {
-  x: number;
-  y: number;
-}
-
-interface IPosition {
-  col: number;
-  row: number;
-}
-
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   state: BubbleStates;
   col: number;
@@ -122,7 +112,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   }
 
   getTilePosition(): IPosition {
-    const row = Math.round(
+    const row = Math.floor(
       (this.y - Grid.offsetY + Grid.halfBubbleSize) / Grid.bubbleSize
     );
     const offsetX = Grid.offsetX + (row % 2 ? Grid.halfBubbleSize : 0);

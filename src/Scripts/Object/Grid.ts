@@ -15,6 +15,35 @@ export enum GridStates {
   gameOver,
 }
 
+const neighbourIndexes = {
+  odd: [
+    [0, -1],
+    [1, -1],
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [1, 1],
+  ],
+  even: [
+    [-1, -1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, 1],
+  ],
+};
+
+interface IPosition {
+  col: number;
+  row: number;
+}
+
+interface ICoordinate {
+  x: number;
+  y: number;
+}
+
 export default class Grid extends Phaser.GameObjects.Container {
   static cols = 8;
   static rows = 10;
@@ -92,12 +121,12 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    for (let row = 0; row < 5; row++) {
-      this.bubbleTile[row].forEach((bubble, col) => {
-        this.addBubble(col, row, getRandomColor());
-      });
-    }
-    this.loadShootingBubble();
+    // for (let row = 0; row < 5; row++) {
+    //   this.bubbleTile[row].forEach((bubble, col) => {
+    //     this.addBubble(col, row, getRandomColor());
+    //   });
+    // }
+    // this.loadShootingBubble();
 
     // For testing
     const { r, b, g, c, o, p, y, n } = colorInitials;
@@ -122,16 +151,16 @@ export default class Grid extends Phaser.GameObjects.Container {
     // this.loadShootingBubble(BubbleColors.blue);
 
     // this.fillTest([
-    //   [y, r, g, r, b, r, y, c],
-    //   [c, g, c, b, r, b, y],
-    //   [o, p, o, g, g, c, g, y],
-    //   [y, b, y, c, b, o, c],
-    //   [r, g, g, c, r, p, r, b],
-    //   [y, b, n, b, p, o],
-    //   [b, n, r, c, n, n, c],
-    //   [o, n, c, b, y],
-    //   [n, o, b, n, n, y],
-    //   [n, n, o, n, g],
+    //   [y, r],
+    //   [c, g],
+    //   [o, p],
+    //   [y],
+    //   [r, g],
+    //   [y, b],
+    //   [b, n],
+    //   [o, n],
+    //   [n, o],
+    //   [n, n],
     // ]);
     // this.loadShootingBubble(BubbleColors.orange);
     // const angle = 5.112735053460839;
@@ -418,32 +447,56 @@ export default class Grid extends Phaser.GameObjects.Container {
     });
   }
 
+  getEmptyNeighbour(bubble: Bubble): IPosition {
+    const { col, row } = bubble.getTilePosition();
+    let dist = Infinity;
+
+    const indexes = row % 2 ? neighbourIndexes.odd : neighbourIndexes.even;
+    let pos: IPosition = { col, row };
+    const { x: x1, y: y1 } = this.shootingBubble!;
+    indexes.forEach(([dCol, dRow]) => {
+      const newCol = col + dCol;
+      const newRow = row + dRow;
+
+      // Have to be null, undefined meaning invalid position
+      if (this.getBubbleAt(newCol, newRow) === null) {
+        const { x: x2, y: y2 } = Grid.getTileCoordinate(newCol, newRow);
+        const newDist = Phaser.Math.Distance.Between(x1, y1, x2, y2);
+        if (newDist < dist) {
+          dist = newDist;
+          pos.col = newCol;
+          pos.row = newRow;
+        }
+      }
+    });
+
+    return pos!;
+  }
+
+  getEmptyTop(): IPosition {
+    let dist = Infinity;
+    let pos: IPosition = { col: 0, row: 0 };
+    this.bubbleTile[0].forEach((bubble, newCol) => {
+      if (bubble === null) {
+        const { x } = Grid.getTileCoordinate(newCol, 0);
+        const newDist = Math.abs(x - this.shootingBubble!.x);
+        if (newDist < dist) {
+          dist = newDist;
+          pos.col = newCol;
+        }
+      }
+    });
+    return pos;
+  }
+
   onHit(bubble: Bubble | null) {
     if (!this.shootingBubble) {
       throw new TypeError("onHit : Unexpected condition");
     }
 
-    let { col, row } = this.shootingBubble.getTilePosition();
-    if (bubble) {
-      // col = bubble.col;
-      // if (row === bubble.row) {
-      //   col += this.shootingBubble.x > bubble.x ? 1 : -1;
-      // } else {
-      //   if (row % 2) {
-      //     col += this.shootingBubble.x > bubble.x ? 0 : -1;
-      //   } else {
-      //     col += this.shootingBubble.x > bubble.x ? 1 : 0;
-      //   }
-      // }
-    } else {
-      console.log("Hit top");
-      row = 0;
-    }
-
-    // Make sure the column is within limit
-    col = Math.min(col, row % 2 ? Grid.cols - 2 : Grid.cols - 1);
-    col = Math.max(col, 0);
-
+    const { col, row } = bubble
+      ? this.getEmptyNeighbour(bubble)
+      : this.getEmptyTop();
     this.registerBubbleAt(this.shootingBubble, col, row);
     if (row >= Grid.rows) {
       return this.gameOver();
@@ -474,5 +527,14 @@ export default class Grid extends Phaser.GameObjects.Container {
     } else {
       console.warn("Grid is not in LevelScene");
     }
+  }
+
+  static getTileCoordinate(col: number, row: number): ICoordinate {
+    const x =
+      col * Grid.bubbleSize +
+      (row % 2 ? Grid.halfBubbleSize : 0) +
+      Grid.offsetX;
+    const y = row * Grid.bubbleSize + Grid.offsetY;
+    return { x, y };
   }
 }
