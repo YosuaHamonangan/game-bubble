@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import Grid, { GridStates } from "./Grid";
-import { IPosition } from "../interfaces/interfaces";
+import { IPosition } from "../Interfaces/Interfaces";
 import { BubbleColors } from "../Util/BubbleUtil";
 import {
   GRAVITY,

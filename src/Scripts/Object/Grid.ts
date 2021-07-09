@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
 import LevelScene from "../Scene/LevelScene";
-import { IPosition, ICoordinate } from "../interfaces/interfaces";
+import { IPosition, ICoordinate } from "../Interfaces/Interfaces";
 import {
   BubbleColors,
   getRandomColor,
