@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import Bubble, { BubbleStates } from "./Bubble";
 import Shooter from "./Shooter";
 import LevelScene from "../Scene/LevelScene";
+import { IPosition, ICoordinate } from "../interfaces/interfaces";
 import {
   BubbleColors,
   getRandomColor,
@@ -33,16 +34,6 @@ const neighbourIndexes = {
     [0, 1],
   ],
 };
-
-interface IPosition {
-  col: number;
-  row: number;
-}
-
-interface ICoordinate {
-  x: number;
-  y: number;
-}
 
 export default class Grid extends Phaser.GameObjects.Container {
   static cols = 8;
@@ -536,5 +527,15 @@ export default class Grid extends Phaser.GameObjects.Container {
       Grid.offsetX;
     const y = row * Grid.bubbleSize + Grid.offsetY;
     return { x, y };
+  }
+
+  static getTilePosition(x: number, y: number): IPosition {
+    const row = Math.floor(
+      (y - Grid.offsetY + Grid.halfBubbleSize) / Grid.bubbleSize
+    );
+    const offsetX = Grid.offsetX + (row % 2 ? Grid.halfBubbleSize : 0);
+    var col = Math.round((x - offsetX) / Grid.bubbleSize);
+
+    return { col, row };
   }
 }

@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
-import Grid from "./Grid";
+import Grid, { GridStates } from "./Grid";
+import { IPosition } from "../interfaces/interfaces";
 import { BubbleColors } from "../Util/BubbleUtil";
 import {
   GRAVITY,
@@ -90,7 +91,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   }
 
   snapToPosition(col: number, row: number) {
-    const { x, y } = this.getTileCoordinate(col, row);
+    const { x, y } = Grid.getTileCoordinate(col, row);
     this.body.reset(x, y);
 
     this.col = col;
@@ -102,23 +103,8 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this.state = BubbleStates.snapped;
   }
 
-  getTileCoordinate(col: number, row: number): ICoordinate {
-    const x =
-      col * Grid.bubbleSize +
-      (row % 2 ? Grid.halfBubbleSize : 0) +
-      Grid.offsetX;
-    const y = row * Grid.bubbleSize + Grid.offsetY;
-    return { x, y };
-  }
-
   getTilePosition(): IPosition {
-    const row = Math.floor(
-      (this.y - Grid.offsetY + Grid.halfBubbleSize) / Grid.bubbleSize
-    );
-    const offsetX = Grid.offsetX + (row % 2 ? Grid.halfBubbleSize : 0);
-    var col = Math.round((this.x - offsetX) / Grid.bubbleSize);
-
-    return { col, row };
+    return Grid.getTilePosition(this.x, this.y);
   }
 
   async shoot(angle: number): Promise<Bubble | null> {
