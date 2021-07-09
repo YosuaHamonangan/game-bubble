@@ -1,6 +1,12 @@
 import * as Phaser from "phaser";
 import Grid from "./Grid";
 import { BubbleColors } from "../Util/BubbleUtil";
+import {
+  GRAVITY,
+  BUBBLE_IMAGE_SIZE,
+  BUBBLE_BODY_RADIUS,
+  BUBBLE_SHOOTING_SPEED,
+} from "../Util/Constant";
 
 export enum BubbleStates {
   idle,
@@ -18,12 +24,6 @@ interface IPosition {
   col: number;
   row: number;
 }
-
-const IMAGE_SIZE = 120;
-const HALF_IMAGE_SIZE = IMAGE_SIZE / 2;
-// smalled body for some spacing
-const BODY_RADIUS = HALF_IMAGE_SIZE * 0.9;
-const SHOOTING_SPEED = 3000;
 
 export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   state: BubbleStates;
@@ -54,13 +54,13 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.physics.add.existing(this);
     this.body.setCircle(
-      BODY_RADIUS,
-      this.width / 2 - BODY_RADIUS,
-      this.height / 2 - BODY_RADIUS
+      BUBBLE_BODY_RADIUS,
+      this.width / 2 - BUBBLE_BODY_RADIUS,
+      this.height / 2 - BUBBLE_BODY_RADIUS
     );
     this.body.onWorldBounds = true;
 
-    this.setScale(Grid.bubbleSize / IMAGE_SIZE);
+    this.setScale(Grid.bubbleSize / BUBBLE_IMAGE_SIZE);
   }
 
   reset() {
@@ -134,7 +134,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   async shoot(angle: number): Promise<Bubble | null> {
     this.state = BubbleStates.moving;
 
-    const vel = new Phaser.Math.Vector2(SHOOTING_SPEED, 0);
+    const vel = new Phaser.Math.Vector2(BUBBLE_SHOOTING_SPEED, 0);
     vel.rotate(angle);
     this.setVelocity(vel.x, vel.y);
 
@@ -174,7 +174,6 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   async drop(): Promise<void> {
     this.state = BubbleStates.droping;
 
-    const GRAVITY = 1000;
     this.setGravityY(GRAVITY);
     this.setVelocityX((0.5 - Math.random()) * 1000);
 

@@ -222,6 +222,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       );
     }
     this.state = GridStates.shooting;
+
     const bubble = await this.shootingBubble.shoot(angle);
     this.onHit(bubble);
   }
@@ -413,6 +414,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       this.setShootingAngle(-Math.PI / 2);
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
+      this.guideLine.clear();
     });
   }
 
