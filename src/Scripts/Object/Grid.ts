@@ -112,12 +112,12 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    // for (let row = 0; row < 5; row++) {
-    //   this.bubbleTile[row].forEach((bubble, col) => {
-    //     this.addBubble(col, row, getRandomColor());
-    //   });
-    // }
-    // this.loadShootingBubble();
+    for (let row = 0; row < 5; row++) {
+      this.bubbleTile[row].forEach((bubble, col) => {
+        this.addBubble(col, row, getRandomColor());
+      });
+    }
+    this.loadShootingBubble();
 
     // For testing
     const { r, b, g, c, o, p, y, n } = colorInitials;
