@@ -61,6 +61,7 @@ export default class LevelScene extends Phaser.Scene {
       )
       .setDepth(-1)
       .setOrigin(0);
+
     this.fpsText = new FpsText(
       this,
       footerBg.getBottomLeft().x + 10,
@@ -81,6 +82,5 @@ export default class LevelScene extends Phaser.Scene {
 
   update(): void {
     this.fpsText.update();
-    this.scoreText.setScore(this.grid.getScore());
   }
 }

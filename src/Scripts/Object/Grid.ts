@@ -20,6 +20,7 @@ export enum GridStates {
 export enum GridEvents {
   gameOver = "grid-gameOver",
   win = "grid-win",
+  score = "grid-score",
 }
 
 const neighbourIndexes = {
@@ -105,7 +106,7 @@ export default class Grid extends Phaser.GameObjects.Container {
 
     this.fillGrid();
 
-    this.score = 0;
+    this.setScore(0);
     this.setState(GridStates.ready);
   }
 
@@ -213,26 +214,24 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.registerBubbleAt(bubble, col, row);
   }
 
-  removeBubble(bubble: Bubble) {
-    bubble.kill();
-    this.calcScore(bubble);
-  }
-
   async dropBubble(bubble: Bubble) {
     const { col, row } = bubble;
     this.registerBubbleAt(null, col, row);
+    this.calcScore(bubble);
 
     this.bubbleGroup.remove(bubble);
     await bubble.drop();
     this.bubbleGroup.add(bubble);
-    this.removeBubble(bubble);
+    bubble.kill();
   }
 
   async popBubble(bubble: Bubble) {
     const { col, row } = bubble;
     this.registerBubbleAt(null, col, row);
+    this.calcScore(bubble);
+
     await bubble.pop();
-    this.removeBubble(bubble);
+    bubble.kill();
   }
 
   async shootBubble(angle: number) {
@@ -260,7 +259,12 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   calcScore(bubble: Bubble) {
-    this.score++;
+    this.setScore(this.score + 1);
+  }
+
+  setScore(score: number) {
+    this.score = score;
+    this.scene.events.emit(GridEvents.score, this.score);
   }
 
   getScore(): number {
