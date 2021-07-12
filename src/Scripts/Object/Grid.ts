@@ -102,7 +102,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     });
 
     if (this.shootingBubble) {
-      this.shootingBubble.destroy();
+      this.shootingBubble.kill();
     }
 
     this.fillGrid();
