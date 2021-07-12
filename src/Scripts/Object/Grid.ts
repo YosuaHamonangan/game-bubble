@@ -114,29 +114,28 @@ export default class Grid extends Phaser.GameObjects.Container {
   initBubbleGroup() {
     const config: Phaser.Types.Physics.Arcade.PhysicsGroupConfig = {
       classType: Bubble,
-      runChildUpdate: true,
     };
     this.bubbleGroup = this.scene.physics.add.group(config);
   }
 
   fillGrid() {
-    // for (let row = 0; row < 5; row++) {
-    //   this.bubbleTile[row].forEach((bubble, col) => {
-    //     this.addBubble(col, row, getRandomColor());
-    //   });
-    // }
-    // this.loadShootingBubble();
+    for (let row = 0; row < 5; row++) {
+      this.bubbleTile[row].forEach((bubble, col) => {
+        this.addBubble(col, row, getRandomColor());
+      });
+    }
+    this.loadShootingBubble();
 
     // For testing
     const { r, b, g, c, o, p, y, n } = colorInitials;
 
-    this.fillTest([
-      [n, b, b, b, b, n, n, n],
-      [n, n, r, n, b, n, n],
-      [n, n, n, n, n, b, n, n],
-      [n, n, n, n, r, n, n],
-    ]);
-    this.loadShootingBubble(BubbleColors.blue);
+    // this.fillTest([
+    //   [n, b, b, b, b, n, n, n],
+    //   [n, n, r, n, b, n, n],
+    //   [n, n, n, n, n, b, n, n],
+    //   [n, n, n, n, r, n, n],
+    // ]);
+    // this.loadShootingBubble(BubbleColors.blue);
 
     // this.fillTest([
     //   [p, c, r, b, r, y, b, y],

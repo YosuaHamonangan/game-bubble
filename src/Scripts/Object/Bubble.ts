@@ -7,6 +7,7 @@ import {
   BUBBLE_IMAGE_SIZE,
   BUBBLE_BODY_RADIUS,
   BUBBLE_SHOOTING_SPEED,
+  BUBBLE_SNAPPING_SPEED,
 } from "../Util/Constant";
 
 export enum BubbleStates {
@@ -61,7 +62,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
 
     // Default state
     this.play("idle");
-    this.state = BubbleStates.idle;
+    this.setState(BubbleStates.idle);
   }
 
   kill() {
@@ -100,7 +101,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     this._x = x;
     this._y = y;
 
-    this.state = BubbleStates.snapped;
+    this.setState(BubbleStates.snapped);
   }
 
   getTilePosition(): IPosition {
@@ -108,7 +109,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   }
 
   async shoot(angle: number): Promise<Bubble | null> {
-    this.state = BubbleStates.moving;
+    this.setState(BubbleStates.moving);
 
     const vel = new Phaser.Math.Vector2(BUBBLE_SHOOTING_SPEED, 0);
     vel.rotate(angle);
@@ -148,7 +149,7 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
   }
 
   async drop(): Promise<void> {
-    this.state = BubbleStates.droping;
+    this.setState(BubbleStates.droping);
 
     this.setGravityY(GRAVITY);
     this.setVelocityX((0.5 - Math.random()) * 1000);
@@ -169,12 +170,28 @@ export default class Bubble extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  update() {
-    if (this.state === BubbleStates.snapped) {
-      const SNAPPING_SPEED = 5;
-      const velX = (this._x - this.x) * SNAPPING_SPEED;
-      const velY = (this._y - this.y) * SNAPPING_SPEED;
-      this.setVelocity(velX, velY);
+  setState(newState: BubbleStates): this {
+    const prevState = this.state;
+    this.state = newState;
+
+    switch (prevState) {
+      case BubbleStates.snapped:
+        this.scene.events.off("update", this.onUpdateSnap, this);
+        break;
     }
+
+    switch (newState) {
+      case BubbleStates.snapped:
+        this.scene.events.on("update", this.onUpdateSnap, this);
+        break;
+    }
+
+    return this;
+  }
+
+  onUpdateSnap() {
+    const velX = (this._x - this.x) * BUBBLE_SNAPPING_SPEED;
+    const velY = (this._y - this.y) * BUBBLE_SNAPPING_SPEED;
+    this.setVelocity(velX, velY);
   }
 }

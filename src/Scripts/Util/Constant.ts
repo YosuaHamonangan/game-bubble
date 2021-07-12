@@ -15,6 +15,7 @@ export const BUBBLE_HALF_IMAGE_SIZE = BUBBLE_IMAGE_SIZE / 2;
 // smalled body for some spacing
 export const BUBBLE_BODY_RADIUS = BUBBLE_HALF_IMAGE_SIZE * 0.9;
 export const BUBBLE_SHOOTING_SPEED = 3000;
+export const BUBBLE_SNAPPING_SPEED = 5;
 
 export const BG_COLOR_HEADER = 0x999999;
 export const BG_COLOR_GRID = 0x666666;
