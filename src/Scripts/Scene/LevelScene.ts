@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import FpsText from "../Object/FpsText";
 import ScoreText from "../Object/ScoreText";
 import Grid from "../Object/Grid";
-import GameOverPanel from "../Object/GameOverPanel";
+import GameEndPanel from "../Object/GameEndPanel";
 import {
   BG_COLOR_HEADER,
   BG_COLOR_GRID,
@@ -13,7 +13,7 @@ export default class LevelScene extends Phaser.Scene {
   private fpsText: FpsText;
   private scoreText: ScoreText;
   private grid: Grid;
-  private gameOverPanel: GameOverPanel;
+  private gameEndPanel: GameEndPanel;
 
   constructor() {
     super({ key: "LevelScene" });
@@ -67,31 +67,16 @@ export default class LevelScene extends Phaser.Scene {
       footerBg.getBottomLeft().y - 10
     );
 
-    this.gameOverPanel = new GameOverPanel(
+    this.gameEndPanel = new GameEndPanel(
       this,
       this.cameras.main.centerX,
-      this.cameras.main.centerY,
-      {
-        onReplay: () => {
-          this.grid.resetGrid();
-          this.closeGameOverPanel();
-        },
-      }
+      this.cameras.main.centerY
     );
-    this.add.existing(this.gameOverPanel);
-    this.closeGameOverPanel();
-  }
+    this.add.existing(this.gameEndPanel);
 
-  onGameOver() {
-    this.openGameOverPanel();
-  }
-
-  openGameOverPanel() {
-    this.gameOverPanel.setVisible(true);
-  }
-
-  closeGameOverPanel() {
-    this.gameOverPanel.setVisible(false);
+    this.gameEndPanel.on("replay-game", () => {
+      this.grid.resetGrid();
+    });
   }
 
   update(): void {

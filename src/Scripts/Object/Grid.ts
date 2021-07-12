@@ -14,6 +14,12 @@ export enum GridStates {
   ready,
   shooting,
   gameOver,
+  win,
+}
+
+export enum GridEvents {
+  gameOver = "grid-gameOver",
+  win = "grid-win",
 }
 
 const neighbourIndexes = {
@@ -100,7 +106,7 @@ export default class Grid extends Phaser.GameObjects.Container {
     this.fillGrid();
 
     this.score = 0;
-    this.state = GridStates.ready;
+    this.setState(GridStates.ready);
   }
 
   initBubbleGroup() {
@@ -112,23 +118,23 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   fillGrid() {
-    for (let row = 0; row < 5; row++) {
-      this.bubbleTile[row].forEach((bubble, col) => {
-        this.addBubble(col, row, getRandomColor());
-      });
-    }
-    this.loadShootingBubble();
+    // for (let row = 0; row < 5; row++) {
+    //   this.bubbleTile[row].forEach((bubble, col) => {
+    //     this.addBubble(col, row, getRandomColor());
+    //   });
+    // }
+    // this.loadShootingBubble();
 
     // For testing
     const { r, b, g, c, o, p, y, n } = colorInitials;
 
-    // this.fillTest([
-    //   [n, b, b, b, b, n, n, n],
-    //   [n, n, r, n, b, n, n],
-    //   [n, n, n, n, n, b, n, n],
-    //   [n, n, n, n, r, n, n],
-    // ]);
-    // this.loadShootingBubble(BubbleColors.blue);
+    this.fillTest([
+      [n, b, b, b, b, n, n, n],
+      [n, n, r, n, b, n, n],
+      [n, n, n, n, n, b, n, n],
+      [n, n, n, n, r, n, n],
+    ]);
+    this.loadShootingBubble(BubbleColors.blue);
 
     // this.fillTest([
     //   [p, c, r, b, r, y, b, y],
@@ -241,7 +247,7 @@ export default class Grid extends Phaser.GameObjects.Container {
         "shootBubble : Unexpected condition - Grid not ready"
       );
     }
-    this.state = GridStates.shooting;
+    this.setState(GridStates.shooting);
 
     const bubble = await this.shootingBubble.shoot(angle);
     this.onHit(bubble);
@@ -383,6 +389,20 @@ export default class Grid extends Phaser.GameObjects.Container {
     line.y2 = point.y;
   }
 
+  findExistingColors(): BubbleColors[] {
+    const colorsMap = {};
+    this.bubbleTile.forEach((r) =>
+      r.forEach((bubble) => {
+        if (bubble) {
+          const color = bubble.getColor();
+          colorsMap[color] = color;
+        }
+      })
+    );
+    return Object.keys(colorsMap).map((c) => colorsMap[c]);
+    // return this.bubbleTile[0].findIndex((bubble) => bubble) === -1;
+  }
+
   drawGuideLine(angle) {
     // Draw guide line
     this.guideLine.clear();
@@ -490,7 +510,7 @@ export default class Grid extends Phaser.GameObjects.Container {
       : this.getEmptyTop();
     this.registerBubbleAt(this.shootingBubble, col, row);
     if (row >= Grid.rows) {
-      return this.gameOver();
+      return this.setState(GridStates.gameOver);
     }
 
     const cluster = this.getCluster(col, row);
@@ -505,18 +525,13 @@ export default class Grid extends Phaser.GameObjects.Container {
       this.dropBubble(bubble);
     });
 
-    this.loadShootingBubble();
-    this.state = GridStates.ready;
-  }
-
-  gameOver() {
-    this.state = GridStates.gameOver;
-
-    if (this.scene instanceof LevelScene) {
-      const scene = this.scene as LevelScene;
-      scene.onGameOver();
+    const colors = this.findExistingColors();
+    if (colors.length) {
+      const idx = Phaser.Math.Between(0, colors.length - 1);
+      this.loadShootingBubble(colors[idx]);
+      this.setState(GridStates.ready);
     } else {
-      console.warn("Grid is not in LevelScene");
+      this.setState(GridStates.win);
     }
   }
 
@@ -537,5 +552,20 @@ export default class Grid extends Phaser.GameObjects.Container {
     var col = Math.round((x - offsetX) / Grid.bubbleSize);
 
     return { col, row };
+  }
+
+  setState(state: GridStates): this {
+    this.state = state;
+
+    switch (state) {
+      case GridStates.gameOver:
+        this.scene.events.emit(GridEvents.gameOver);
+        break;
+      case GridStates.win:
+        this.scene.events.emit(GridEvents.win);
+        break;
+    }
+
+    return this;
   }
 }
