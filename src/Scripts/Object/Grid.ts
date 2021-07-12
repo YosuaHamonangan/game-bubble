@@ -12,6 +12,7 @@ import { DEFAULT_WIDTH } from "../Util/Constant";
 
 export enum GridStates {
   ready,
+  aiming,
   shooting,
   gameOver,
   win,
@@ -241,9 +242,9 @@ export default class Grid extends Phaser.GameObjects.Container {
       );
     }
 
-    if (this.state !== GridStates.ready) {
+    if (this.state !== GridStates.aiming) {
       throw new TypeError(
-        "shootBubble : Unexpected condition - Grid not ready"
+        "shootBubble : Unexpected condition - Grid was not aiming"
       );
     }
     this.setState(GridStates.shooting);
@@ -436,25 +437,35 @@ export default class Grid extends Phaser.GameObjects.Container {
   }
 
   setEventArea() {
-    this.setInteractive(Grid.eventArea, Phaser.Geom.Rectangle.Contains);
-
-    this.on("pointerdown", (pointer, x, y) => {
-      if (this.state !== GridStates.ready) return;
-      this.shooter.setTarget(x, y);
-      const angle = this.shooter.getAngle();
-      this.setShootingAngle(angle);
+    this.setInteractive({
+      hitArea: Grid.eventArea,
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      draggable: true,
     });
 
-    this.on("pointermove", (pointer, x, y) => {
+    this.on("dragstart", (pointer, x, y) => {
       if (this.state !== GridStates.ready) return;
       this.shooter.setTarget(x, y);
       const angle = this.shooter.getAngle();
       this.setShootingAngle(angle);
       this.drawGuideLine(angle);
+      this.setState(GridStates.aiming);
     });
 
-    this.on("pointerup", (pointer, x, y) => {
-      if (this.state !== GridStates.ready) return;
+    this.on("pointermove", (pointer, x, y) => {
+      let angle;
+      if (this.state === GridStates.ready || this.state === GridStates.aiming) {
+        this.shooter.setTarget(x, y);
+        angle = this.shooter.getAngle();
+        this.setShootingAngle(angle);
+
+        if (this.state !== GridStates.aiming) return;
+        this.drawGuideLine(angle);
+      }
+    });
+
+    this.on("dragend", (pointer, x, y) => {
+      if (this.state !== GridStates.aiming) return;
       this.setShootingAngle(-Math.PI / 2);
       const angle = this.shooter.getAngle();
       this.shootBubble(angle);
